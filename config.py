@@ -1,0 +1,45 @@
+import os
+
+BASE_DIR = os.path.abspath(os.path.dirname(__file__))
+
+DATABASE_PATH = os.path.join(BASE_DIR, "database.db")
+
+# Forecast horizons configuration
+SHORT_TERM_DAYS = 30
+MID_TERM_DAYS = 180
+LONG_TERM_DAYS = 365
+
+# Model selection based on evaluation results
+# Short Term: PROPHET (RMSE: 61,874.25)
+# Mid Term: PROPHET (RMSE: 30,697.56)
+# Long Term: ARIMA (RMSE: 27,088.97)
+FORECAST_MODELS = {
+    'short': {
+        'days': SHORT_TERM_DAYS,
+        'model': 'prophet',
+        'train_end': '2025-12-31',
+        'test_start': '2026-01-01',
+        'test_end': '2026-01-31'
+    },
+    'mid': {
+        'days': MID_TERM_DAYS,
+        'model': 'prophet',
+        'train_end': '2025-07-30',
+        'test_start': '2025-08-01',
+        'test_end': '2026-01-31'
+    },
+    'long': {
+        'days': LONG_TERM_DAYS,
+        'model': 'arima',
+        'train_end': '2025-01-31',
+        'test_start': '2025-02-01',
+        'test_end': '2026-01-31'
+    }
+}
+
+# Model caching configuration
+MODEL_CACHE_DIR = os.path.join(BASE_DIR, "model_cache")
+MODEL_CACHE_TTL = 3600  # Cache for 1 hour (in seconds)
+
+# Data configuration
+ROLLING_WINDOW_DAYS = 365  # Display last 365 days in chart

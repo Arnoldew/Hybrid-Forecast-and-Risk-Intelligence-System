@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Cabai EWS Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@2.2.0"></script>
+    <style>
+        body{
+            font-family: Arial, sans-serif;
+            margin: 40px;
+            background-color: #f4f6f9;
+        }
+        h1 {
+            margin-bottom: 30px;
+        }
+        canvas {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 10px rgba(0,0,0,1);
+        }
+
+        .badge{
+            padding: 6px 12px;
+            border-radius: 8px;
+            color: white;
+            font-weight: bold;
+            display: inline-block;
+        }
+        .normal { background-color: #2ecc71;}
+        .waspada { background-color: #f39c12;}
+        .bahaya { background-color: #e74c3c;}
+    </style>
+</head>
+<body>
+    <h1>Hybrid Forecast & Risk Intelligence System</h1>
+
+    <p><I>Last Update : {{ last_update }}</I></p>
+
+    <h3>Short Term Status: 
+        <span class="badge {{ short_level|lower }}">{{ short_level }}</span></h3>
+    
+    <h3>Mid Term Status: 
+        <span class="badge {{ mid_level|lower }}">{{ mid_level }}</span></h3>
+    
+    <h3>Long Term Status: 
+        <span class="badge {{ long_level|lower }}">{{ long_level }}</span></h3>
+
+    
+    <div style="background: white; padding: 15px; margin-top: 20px; border-radius: 8px;">
+        <b>Forecast Summary:</b><br>
+        Short-Term Avg: Rp {{ short_avg }}<br>
+        Mid-Term Avg: Rp {{ mid_avg }}<br>
+        Long-Term Avg: Rp {{ long_avg }}
+    </div>
+
+    <a href="/download">
+        <button style="padding: 8px 15px; margin-bottom: 15px;">
+            Download Forecast CSV
+        </button>
+    </a>
+
+    <a href="/upload">
+        <button style="padding: 8px 15px; margin-bottom: 10px;">
+            Upload Monthly Data
+        </button>
+    </a>
+
+    <canvas id="priceChart" width="1000" height="400"></canvas>
+
+    <h3>
+        Volatility (30-Day Rolling Std)
+    </h3>
+    <canvas id="volChart" width="1000" height="250"></canvas>
+    
+
+    <div style="margin-top: 20px; background: white; padding: 15px; border-radius: 8px;">
+        <b>Risk Classification Rule:</b><br>
+        Normal -> Deviasi < 3 Standar deviasi<br>
+        Waspada -> Deviasi signifikan atau volatilitas meningkat<br>
+        Bahaya -> Deviasi > 3 standar deviasi dari rata-rata 30 hari terakhir
+    </div>
+
+    <script>
+    const ctx = document.getElementById('priceChart').getContext('2d');
+    const volCtx = document.getElementById('volChart').getContext('2d');
+
+    // All dates untuk timeline lengkap
+    const allDates = {{ all_dates | tojson }};
+    
+    // Chart data (historical + actual)
+    const chartDates = {{ chart_dates | tojson }};
+    const chartPrices = {{ chart_prices | tojson }};
+    
+    // Forecast data
+    const shortDates = {{ short_dates | tojson }};
+    const shortValues = {{ short_values | tojson }};
+    const midDates = {{ mid_dates | tojson }};
+    const midValues = {{ mid_values | tojson }};
+    const longDates = {{ long_dates | tojson }};
+    const longValues = {{ long_values | tojson }};
+
+    {% if long_upper %}
+    const longUpper = {{ long_upper | tojson }};
+    const longLower = {{ long_lower | tojson }};
+    {% else %}
+    const longUpper = null;
+    const longLower = null;
+    {% endif %}
+
+    const volDates = {{ vol_dates | tojson }};
+    const volValues = {{ vol_values | tojson}};
+
+    // Forecast start dates untuk setiap horizon
+    const shortForecastStart = "{{ short_forecast_start }}";
+    const midForecastStart = "{{ mid_forecast_start }}";
+    const longForecastStart = "{{ long_forecast_start }}";
+
+    // Fungsi untuk memetakan nilai ke timeline lengkap
+    function buildSeries(allDates, dataDateList, dataValueList) {
+        return allDates.map(date => {
+            const index = dataDateList.indexOf(date);
+            return index !== -1 ? dataValueList[index] : null;
+        });
+    }
+
+    Chart.register(window['chartjs-plugin-annotation']);
+
+    // Volatility Chart
+    new Chart(volCtx, {
+        type: 'line',
+        data: {
+            labels: volDates,
+            datasets: [{
+                label: 'Volatility',
+                data: volValues,
+                borderColor: 'purple',
+                borderWidth: 2,
+                fill: false
+            }]
+        }
+    });
+
+    // Build annotations untuk 3 forecast start lines
+    const annotations = {};
+    
+    if (shortForecastStart) {
+        annotations.shortForecastStart = {
+            type: 'line',
+            xMin: shortForecastStart,
+            xMax: shortForecastStart,
+            borderColor: 'green',
+            borderWidth: 2,
+            borderDash: [5, 5],
+            label: {
+                display: true,
+                content: 'Short-Term Start',
+                position: 'top'
+            }
+        };
+    }
+    
+    if (midForecastStart) {
+        annotations.midForecastStart = {
+            type: 'line',
+            xMin: midForecastStart,
+            xMax: midForecastStart,
+            borderColor: 'orange',
+            borderWidth: 2,
+            borderDash: [5, 5],
+            label: {
+                display: true,
+                content: 'Mid-Term Start',
+                position: 'top'
+            }
+        };
+    }
+    
+    if (longForecastStart) {
+        annotations.longForecastStart = {
+            type: 'line',
+            xMin: longForecastStart,
+            xMax: longForecastStart,
+            borderColor: 'red',
+            borderWidth: 2,
+            borderDash: [5, 5],
+            label: {
+                display: true,
+                content: 'Long-Term Start',
+                position: 'top'
+            }
+        };
+    }
+
+    // Price Chart dengan forecast overlay
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: allDates,
+            datasets: [
+                {
+                    label: 'Historical & Actual Price',
+                    data: buildSeries(allDates, chartDates, chartPrices),
+                    borderColor: 'black',
+                    borderWidth: 2.5,
+                    fill: false,
+                    pointRadius: 0,
+                    tension: 0
+                },
+                {
+                    label: 'Short-Term Forecast (PROPHET)',
+                    data: buildSeries(allDates, shortDates, shortValues),
+                    borderColor: 'green',
+                    borderWidth: 2,
+                    fill: false,
+                    pointRadius: 0,
+                    tension: 0.1
+                },
+                {
+                    label: 'Mid-Term Forecast (PROPHET)',
+                    data: buildSeries(allDates, midDates, midValues),
+                    borderColor: 'orange',
+                    borderWidth: 2,
+                    fill: false,
+                    pointRadius: 0,
+                    tension: 0.1
+                },
+                {% if long_upper %}
+                {
+                    label: 'Long-Term Upper Bound',
+                    data: buildSeries(allDates, longDates, longUpper),
+                    borderColor: 'rgba(255,0,0,0.3)',
+                    backgroundColor: 'rgba(255,0,0,0.05)',
+                    fill: '+1',
+                    pointRadius: 0,
+                    tension: 0.1
+                },
+                {
+                    label: 'Long-Term Lower Bound',
+                    data: buildSeries(allDates, longDates, longLower),
+                    borderColor: 'rgba(255,0,0,0.3)',
+                    fill: false,
+                    pointRadius: 0,
+                    tension: 0.1
+                },
+                {% endif %}
+                {
+                    label: 'Long-Term Forecast (ARIMA)',
+                    data: buildSeries(allDates, longDates, longValues),
+                    borderColor: 'red',
+                    borderWidth: 2,
+                    fill: false,
+                    pointRadius: 0,
+                    tension: 0.1
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            interaction: {
+                mode: 'index',
+                intersect: false,
+            },
+            scales: {
+                y: {
+                    title: {
+                        display: true,
+                        text: 'Harga (Ribuan Rupiah)'
+                    },
+                    ticks: {
+                        callback: function(value) {
+                            return 'Rp ' + (value * 1000).toLocaleString('id-ID');
+                        }
+                    }
+                }
+            },
+            plugins: {
+                annotation: {
+                    annotations: annotations
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            let value = context.parsed.y;
+                            if (value === null) return '';
+                            return context.dataset.label + ': Rp ' +
+                                (value * 1000).toLocaleString('id-ID');
+                        }
+                    }
+                },
+                legend: {
+                    display: true,
+                    position: 'top'
+                }
+            }
+        }
+    });
+    </script>
+
+
+</body>
+</html>
