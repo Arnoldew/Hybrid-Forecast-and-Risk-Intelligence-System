@@ -1,0 +1,18 @@
+# Python cache
+__pycache__/
+*.pyc
+
+# Virtual environment
+venv/
+
+# Model cache
+model_cache/
+
+# Database
+*.db
+
+# OS
+.DS_Store
+
+# Jupyter
+.ipynb_checkpoints

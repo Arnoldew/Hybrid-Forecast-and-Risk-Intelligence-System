@@ -37,6 +37,34 @@ FORECAST_MODELS = {
     }
 }
 
+# =========================================
+# Evaluation Forecast Window (2025)
+# =========================================
+
+EVAL_WINDOWS = {
+
+    "long": {
+        "train_end": "2024-12-31",
+        "forecast_start": "2025-01-01",
+        "forecast_end": "2025-12-31",
+        "model": "prophet"
+    },
+
+    "mid": {
+        "train_end": "2025-06-30",
+        "forecast_start": "2025-07-01",
+        "forecast_end": "2025-12-31",
+        "model": "prophet"
+    },
+
+    "short": {
+        "train_end": "2025-11-30",
+        "forecast_start": "2025-12-01",
+        "forecast_end": "2025-12-31",
+        "model": "arima"
+    }
+}
+
 # Model caching configuration
 MODEL_CACHE_DIR = os.path.join(BASE_DIR, "model_cache")
 MODEL_CACHE_TTL = 3600  # Cache for 1 hour (in seconds)

@@ -4,6 +4,7 @@ import os
 import pandas as pd
 import json
 import sqlite3
+from services.forecast_service import generate_evaluation_forecasts
 from config import DATABASE_PATH, ROLLING_WINDOW_DAYS
 from datetime import datetime
 from services.risk_service import calculate_risk, save_risk
@@ -58,6 +59,12 @@ def dashboard():
             print(f"Error generating forecasts: {e}")
             return f"Error generating forecasts: {str(e)}"
 
+        eval_forecasts = generate_evaluation_forecasts(df)
+
+        eval_short = eval_forecasts["short"]
+        eval_mid = eval_forecasts["mid"]
+        eval_long = eval_forecasts["long"]
+
         save_forecast("short", short_forecast)
         save_forecast("mid", mid_forecast)
         save_forecast("long", long_forecast)
@@ -92,26 +99,28 @@ def dashboard():
         #
         # Catatan: window forecast sendiri selalu "maju" mengikuti data aktual terakhir (anchor).
 
-        # Actual 2025 full (wajib tampil)
-        df_actual_2025 = df.loc[(df.index >= pd.Timestamp("2025-01-01")) & (df.index <= pd.Timestamp("2025-12-31"))].copy()
-
-        # Actual tambahan (mis. Jan 2026) jika ada
-        df_actual_extra = df.loc[df.index >= pd.Timestamp("2026-01-01")].copy()
-
-        df_chart_data = pd.concat([df_actual_2025, df_actual_extra]).sort_index()
+        # =====================================================================
+        # DATA UNTUK CHART (TRAIN + ACTUAL)
+        # =====================================================================
+        df_chart_data = df.loc[
+            (df.index >= pd.Timestamp("2022-01-01")) &
+            (df.index <= pd.Timestamp("2025-12-31"))
+        ].copy()
 
         chart_dates = df_chart_data.index.strftime("%Y-%m-%d").tolist()
         chart_prices = df_chart_data["price"].tolist()
 
-        # Forecast data
-        short_dates = short_forecast.index.strftime("%Y-%m-%d").tolist()
-        short_values = short_forecast.tolist()
+        # =====================================================================
+        # FORECAST DATA UNTUK CHART (EVALUATION FORECAST)
+        # =====================================================================
+        short_dates = eval_short.index.strftime("%Y-%m-%d").tolist()
+        short_values = eval_short.tolist()
 
-        mid_dates = mid_forecast.index.strftime("%Y-%m-%d").tolist()
-        mid_values = mid_forecast.tolist()
+        mid_dates = eval_mid.index.strftime("%Y-%m-%d").tolist()
+        mid_values = eval_mid.tolist()
 
-        long_dates = long_forecast.index.strftime("%Y-%m-%d").tolist()
-        long_values = long_forecast.tolist()
+        long_dates = eval_long.index.strftime("%Y-%m-%d").tolist()
+        long_values = eval_long.tolist()
 
         # Combine chart dates dengan forecast dates untuk timeline lengkap
         all_dates = sorted(list(set(chart_dates + short_dates + mid_dates + long_dates)))
@@ -129,9 +138,9 @@ def dashboard():
         vol_values = volatility.fillna(0).tolist()
 
         # Forecast start dates untuk setiap horizon
-        short_forecast_start = short_forecast.index.min().strftime("%Y-%m-%d") if len(short_forecast) > 0 else ""
-        mid_forecast_start = mid_forecast.index.min().strftime("%Y-%m-%d") if len(mid_forecast) > 0 else ""
-        long_forecast_start = long_forecast.index.min().strftime("%Y-%m-%d") if len(long_forecast) > 0 else ""
+        short_forecast_start = eval_short.index.min().strftime("%Y-%m-%d")
+        mid_forecast_start = eval_mid.index.min().strftime("%Y-%m-%d")
+        long_forecast_start = eval_long.index.min().strftime("%Y-%m-%d")
 
         if isinstance(long_forecast, pd.DataFrame):
             long_upper = long_forecast['yhat_upper'].tolist()

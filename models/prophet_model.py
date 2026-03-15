@@ -32,6 +32,7 @@ def forecast_prophet(model, periods):
     future = model.make_future_dataframe(periods=periods)
     forecast = model.predict(future)
     
+    result = forecast[['ds', 'yhat', 'yhat_lower', 'yhat_upper']]
     # Return only the future forecast (last 'periods' rows)
     return forecast.tail(periods)
 

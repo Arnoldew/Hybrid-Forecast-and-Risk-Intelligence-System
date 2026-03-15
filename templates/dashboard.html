@@ -116,6 +116,11 @@
     const midForecastStart = "{{ mid_forecast_start }}";
     const longForecastStart = "{{ long_forecast_start }}";
 
+    // Mape Evalution
+    const mapeShort = {{ mape_short | default(0) }};
+    const mapeMid = {{ mape_mid | default(0) }};
+    const mapeLong = {{ mape_long | default(0) }};
+
     // Fungsi untuk memetakan nilai ke timeline lengkap
     function buildSeries(allDates, dataDateList, dataValueList) {
         return allDates.map(date => {
@@ -231,7 +236,9 @@
                     data: buildSeries(allDates, longDates, longUpper),
                     borderColor: 'rgba(255,0,0,0.3)',
                     backgroundColor: 'rgba(255,0,0,0.05)',
-                    fill: '+1',
+                    fill: {
+                        target: '+1'
+                    },
                     pointRadius: 0,
                     tension: 0.1
                 },
@@ -275,8 +282,52 @@
                 }
             },
             plugins: {
+                title: {
+                    display: true,
+                    text: [
+                        'Hybrid Forecast Price Chart',
+                        'MAPE: Short: $(mapeShort)% | Mid: $(mapeMid)% | Long: $(mapeLong)%'
+                    ]
+                },
                 annotation: {
-                    annotations: annotations
+                    annotations: {
+                         trainZone: {
+                            type: 'box',
+                            xMin: '2022-01-01',
+                            xMax: '2024-12-31',
+                            backgroundColor: 'rgba(0,0,0,0.03)',
+                            borderWidth: 0,
+                            label: {
+                                display: true,
+                                content: 'Training Data',
+                                position: 'start'
+                            }
+                        },
+                        trainingPhase: {
+                            type: 'box',
+                            xMin: '2022-01-01',
+                            xMax: '2024-12-31',
+                            backgroundColor: 'rgba(0,150,255,0.08)',
+                            borderWidth: 0,
+                            label: {
+                                display: true,
+                                content: 'Training Phase',
+                            }
+                        },
+                        testingPhase: {
+                            type: 'box',
+                            xMin: '2025-01-01',
+                            xMax: '2025-12-31',
+                            backgroundColor: 'rgba(255,165,0,0.08)',
+                            borderWidth: 0,
+                            label: {
+                                display: true,
+                                content: 'Testing / Evaluation',
+                                position: 'start'
+                            }
+                        },
+                    ...annotations
+                    }
                 },
                 tooltip: {
                     callbacks: {

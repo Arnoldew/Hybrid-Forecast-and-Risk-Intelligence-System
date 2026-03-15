@@ -6,6 +6,7 @@ Menyediakan forecast untuk short, mid, dan long term dengan model optimal
 import pandas as pd
 import numpy as np
 from config import FORECAST_MODELS
+from config import EVAL_WINDOWS
 from models.arima_model import train_arima, forecast_arima
 from models.prophet_model import train_prophet, forecast_prophet
 from services.model_cache_service import (
@@ -130,3 +131,48 @@ def forecast_long_term(df):
     """Forecast long term (365 days) using ARIMA"""
     # Long-term = 12 bulan ke depan dari anchor
     return forecast_horizon(df, "long")
+
+def generate_evaluation_forecasts(df):
+
+    df = prepare_dataframe(df)
+    
+    forecasts = {}
+
+    for horizon, cfg in EVAL_WINDOWS.items():
+
+        train_df = df.loc[:cfg["train_end"]]
+
+        start = pd.to_datetime(cfg["forecast_start"])
+        end = pd.to_datetime(cfg["forecast_end"])
+
+        steps = (end - start).days + 1
+
+        if cfg["model"] == "arima":
+
+            model = train_arima(train_df)
+            forecast_values = forecast_arima(model, steps)
+
+        else:
+
+            train_reset = train_df.reset_index()
+            train_reset.columns = ["ds", "y"]
+
+            model = train_prophet(train_reset)
+            forecast_df = forecast_prophet(model, steps)
+
+            forecast_values = forecast_df["yhat"].values
+
+        forecast_index = pd.date_range(
+            start=start, 
+            periods=steps, 
+            freq="D"
+        )
+
+        forecast_series = pd.Series(
+            forecast_values, 
+            index=forecast_index
+        ).clip(lower=0)
+
+        forecasts[horizon] = forecast_series
+
+    return forecasts
