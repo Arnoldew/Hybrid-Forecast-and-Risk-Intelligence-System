@@ -48,6 +48,10 @@ def init_db():
 
 
 def save_forecast(horizon, forecast_series):
+     # Normalize: jika DataFrame ambil kolom yhat
+    if isinstance(forecast_series, pd.DataFrame):
+        forecast_series = forecast_series['yhat']
+
     """Save forecast results to database
     
     Args:

@@ -4,6 +4,8 @@ import os
 import pandas as pd
 import json
 import sqlite3
+from utils.metrics import calculate_mape
+from services.evaluation_service import calculate_mape
 from services.forecast_service import generate_evaluation_forecasts
 from config import DATABASE_PATH, ROLLING_WINDOW_DAYS
 from datetime import datetime
@@ -60,10 +62,40 @@ def dashboard():
             return f"Error generating forecasts: {str(e)}"
 
         eval_forecasts = generate_evaluation_forecasts(df)
+        short_fc = eval_forecasts['short']
+        mid_fc = eval_forecasts['mid']
+        long_fc = eval_forecasts['long']
+
+        actual_short = df.loc["2025-12-01":"2025-12-31"]["price"]
+        actual_mid = df.loc["2025-07-01":"2025-12-31"]["price"]
+        actual_long = df.loc["2025-01-01":"2025-12-31"]["price"]
+    
+        short_mape = calculate_mape(actual_short, short_fc["yhat"])
+        mid_mape = calculate_mape(actual_mid, mid_fc["yhat"])
+        long_mape = calculate_mape(actual_long, long_fc["yhat"])
 
         eval_short = eval_forecasts["short"]
         eval_mid = eval_forecasts["mid"]
         eval_long = eval_forecasts["long"]
+
+        # Hitung MAPE untuk setiap horizon
+        # (ambil data aktual yang indeksnya ada di forecast, lalu bandingkan)
+        actual_short = df["price"].reindex(eval_short.index).dropna()
+        actual_mid   = df["price"].reindex(eval_mid.index).dropna()
+        actual_long  = df["price"].reindex(eval_long.index).dropna()
+
+        mape_short = calculate_mape(
+            actual_short.values,
+            eval_short.loc[actual_short.index].values
+        )
+        mape_mid = calculate_mape(
+            actual_mid.values,
+            eval_mid.loc[actual_mid.index].values
+        )
+        mape_long = calculate_mape(
+            actual_long.values,
+            eval_long.loc[actual_long.index].values
+        )
 
         save_forecast("short", short_forecast)
         save_forecast("mid", mid_forecast)
@@ -120,7 +152,7 @@ def dashboard():
         mid_values = eval_mid.tolist()
 
         long_dates = eval_long.index.strftime("%Y-%m-%d").tolist()
-        long_values = eval_long.tolist()
+        long_eval_values = eval_long.tolist()
 
         # Combine chart dates dengan forecast dates untuk timeline lengkap
         all_dates = sorted(list(set(chart_dates + short_dates + mid_dates + long_dates)))
@@ -145,11 +177,11 @@ def dashboard():
         if isinstance(long_forecast, pd.DataFrame):
             long_upper = long_forecast['yhat_upper'].tolist()
             long_lower = long_forecast['yhat_lower'].tolist()
-            long_values = long_forecast['yhat'].tolist()
+            long_prod_values = long_forecast['yhat'].tolist()
         else:
             long_upper = None
             long_lower = None
-            long_values = long_forecast.tolist()
+            long_prod_values = long_forecast.tolist()
 
         return render_template(
             "dashboard.html",
@@ -161,7 +193,8 @@ def dashboard():
             mid_dates=mid_dates,
             mid_values=mid_values,
             long_dates=long_dates,
-            long_values=long_values,
+            long_eval_values=long_eval_values,
+            long_prod_values=long_prod_values,
             short_level=short_level,
             mid_level=mid_level,
             long_level=long_level,
@@ -175,7 +208,10 @@ def dashboard():
             long_upper=long_upper,
             long_lower=long_lower,
             vol_dates=vol_dates,
-            vol_values=vol_values
+            vol_values=vol_values,
+            mape_short=round(mape_short, 2),
+            mape_mid=round(mape_mid, 2),
+            mape_long=round(mape_long, 2)
         )
         
     except Exception as e:
@@ -195,13 +231,15 @@ def download_forecast():
     long_forecast = forecast_long_term(df)
 
     if isinstance(long_forecast, pd.DataFrame):
-        values = long_forecast["yhat"].values
+        forecast_values = long_forecast['yhat'].values
+        forecast_index = long_forecast.index
     else: 
-        values = long_forecast.values
+        forecast_values = long_forecast.values
+        forecast_index = long_forecast.index
 
     df_download = pd.DataFrame({
-        "date": long_forecast.index.strftime("%Y-%m-%d"),
-        "long_term_forecast": long_forecast.values
+        "date": forecast_index.strftime("%Y-%m-%d"),
+        "long_term_forecast": forecast_values
     })
 
     file_path = "Forecast_export.csv"
@@ -236,8 +274,8 @@ def upload_file():
                 "harga": "price"
             })
 
-            df["price"] = df["price"].astype(str)
             df["price"] = df["price"].str.replace(".", "", regex=False)
+            df["price"] = df["price"].str.replace(",", "", regex=False)
             df["price"] = pd.to_numeric(df["price"], errors="coerce")
 
             if"date" not in df.columns or "price" not in df.columns:

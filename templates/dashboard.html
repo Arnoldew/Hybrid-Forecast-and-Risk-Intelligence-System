@@ -253,12 +253,17 @@
                 {% endif %}
                 {
                     label: 'Long-Term Forecast (ARIMA)',
-                    data: buildSeries(allDates, longDates, longValues),
+                    data: buildSeries(allDates, longDates, longEvalValues),
                     borderColor: 'red',
                     borderWidth: 2,
                     fill: false,
                     pointRadius: 0,
                     tension: 0.1
+                },
+                {
+                    label: 'Long-Term Forecast - Prediksi',
+                    data: buildSeries(allDates, longDates, longProdValues),   // ← pakai production
+                    borderColor: 'darkred',
                 }
             ]
         },
@@ -286,7 +291,7 @@
                     display: true,
                     text: [
                         'Hybrid Forecast Price Chart',
-                        'MAPE: Short: $(mapeShort)% | Mid: $(mapeMid)% | Long: $(mapeLong)%'
+                        `MAPE: Short: ${mapeShort}% | Mid: ${mapeMid}% | Long: ${mapeLong}%`
                     ]
                 },
                 annotation: {

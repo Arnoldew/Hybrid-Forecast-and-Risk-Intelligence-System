@@ -8,9 +8,8 @@ def train_prophet(train_df):
     """
     Train Prophet model
     """
-    df = train_df.copy()
-    df = df.reset_index()
-    df = df.rename(columns={'date': 'ds', 'price': 'y'})
+    df = train_df[['ds', 'y']].copy()    
+    df = df.dropna()  # Prophet tidak bisa handle missing values
 
     model = Prophet(
         yearly_seasonality=True,

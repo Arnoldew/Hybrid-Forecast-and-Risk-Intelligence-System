@@ -47,7 +47,7 @@ EVAL_WINDOWS = {
         "train_end": "2024-12-31",
         "forecast_start": "2025-01-01",
         "forecast_end": "2025-12-31",
-        "model": "prophet"
+        "model": "arima"
     },
 
     "mid": {
