@@ -1,5 +1,7 @@
 import sqlite3
 import pandas as pd
+from config import RISK_WINDOW_DAYS
+window = RISK_WINDOW_DAYS
 from config import DATABASE_PATH, ROLLING_WINDOW_DAYS
 from models.risk_engine import (
     calculate_volatility,

@@ -1,4 +1,5 @@
 import sqlite3
+import pandas as pd 
 from config import DATABASE_PATH
 
 
@@ -48,16 +49,18 @@ def init_db():
 
 
 def save_forecast(horizon, forecast_series):
-     # Normalize: jika DataFrame ambil kolom yhat
-    if isinstance(forecast_series, pd.DataFrame):
-        forecast_series = forecast_series['yhat']
-
+    
     """Save forecast results to database
     
     Args:
         horizon: 'short', 'mid', or 'long'
         forecast_series: Series with forecast dates as index and prices as values
     """
+    
+    # Normalize: jika DataFrame ambil kolom yhat
+    if isinstance(forecast_series, pd.DataFrame):
+        forecast_series = forecast_series['yhat']
+
     try:
         conn = sqlite3.connect(DATABASE_PATH)
         cursor = conn.cursor()

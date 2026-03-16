@@ -71,3 +71,4 @@ MODEL_CACHE_TTL = 3600  # Cache for 1 hour (in seconds)
 
 # Data configuration
 ROLLING_WINDOW_DAYS = 365  # Display last 365 days in chart
+RISK_WINDOW_DAYS = 30 # Use 30 days for rolling calculations in risk engine   

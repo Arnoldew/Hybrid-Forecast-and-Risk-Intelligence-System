@@ -133,33 +133,34 @@ def forecast_long_term(df):
     return forecast_horizon(df, "long")
 
 def generate_evaluation_forecasts(df):
-
     df = prepare_dataframe(df)
-    
     forecasts = {}
 
     for horizon, cfg in EVAL_WINDOWS.items():
+        model = None
+        cache_key = f"eval_{horizon}_{cfg['train_end'].replace('-','')}"
 
         train_df = df.loc[:cfg["train_end"]]
-
         start = pd.to_datetime(cfg["forecast_start"])
         end = pd.to_datetime(cfg["forecast_end"])
-
         steps = (end - start).days + 1
 
+        if is_cache_valid(cache_key):
+            model = load_cached_model(cache_key)
+
+        if model is None:
+            if cfg["model"] == "arima":
+                model = train_arima(train_df)
+            else:
+                train_reset = train_df.reset_index()
+                train_reset.columns = ["ds", "y"]
+                model = train_prophet(train_reset)
+            save_model_to_cache(cache_key, model)
+        
         if cfg["model"] == "arima":
-
-            model = train_arima(train_df)
             forecast_values = forecast_arima(model, steps)
-
         else:
-
-            train_reset = train_df.reset_index()
-            train_reset.columns = ["ds", "y"]
-
-            model = train_prophet(train_reset)
             forecast_df = forecast_prophet(model, steps)
-
             forecast_values = forecast_df["yhat"].values
 
         forecast_index = pd.date_range(

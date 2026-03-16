@@ -94,7 +94,9 @@ def run_evaluation(train_end_date, test_start_date, test_end_date, label):
 
     # ================= PROPHET =================
     print("\n--- PROPHET ---")
-    prophet_model = train_prophet(train.reset_index())
+    prophet_train = train.reset_index()
+    prophet_train.columns = ['ds', 'y']
+    prophet_model = train_prophet(prophet_train)
     forecast = forecast_prophet(prophet_model, steps)
 
     forecast = forecast.set_index('ds')

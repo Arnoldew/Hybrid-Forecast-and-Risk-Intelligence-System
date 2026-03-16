@@ -5,7 +5,6 @@ import pandas as pd
 import json
 import sqlite3
 from utils.metrics import calculate_mape
-from services.evaluation_service import calculate_mape
 from services.forecast_service import generate_evaluation_forecasts
 from config import DATABASE_PATH, ROLLING_WINDOW_DAYS
 from datetime import datetime
@@ -62,17 +61,6 @@ def dashboard():
             return f"Error generating forecasts: {str(e)}"
 
         eval_forecasts = generate_evaluation_forecasts(df)
-        short_fc = eval_forecasts['short']
-        mid_fc = eval_forecasts['mid']
-        long_fc = eval_forecasts['long']
-
-        actual_short = df.loc["2025-12-01":"2025-12-31"]["price"]
-        actual_mid = df.loc["2025-07-01":"2025-12-31"]["price"]
-        actual_long = df.loc["2025-01-01":"2025-12-31"]["price"]
-    
-        short_mape = calculate_mape(actual_short, short_fc["yhat"])
-        mid_mape = calculate_mape(actual_mid, mid_fc["yhat"])
-        long_mape = calculate_mape(actual_long, long_fc["yhat"])
 
         eval_short = eval_forecasts["short"]
         eval_mid = eval_forecasts["mid"]
@@ -160,7 +148,7 @@ def dashboard():
         # Calculate averages
         short_avg = round(sum(short_values)/len(short_values), 2) if short_values else 0
         mid_avg = round(sum(mid_values)/len(mid_values), 2) if mid_values else 0
-        long_avg = round(sum(long_values)/len(long_values), 2) if long_values else 0
+        long_avg = round(sum(long_eval_values)/len(long_eval_values), 2) if long_eval_values else 0
 
         last_update = datetime.now().strftime("%d %B %Y %H:%M")
 
@@ -274,13 +262,15 @@ def upload_file():
                 "harga": "price"
             })
 
+            if"date" not in df.columns or "price" not in df.columns:
+                return "Format file tidak sesuai. Kolom yang diperlukan: 'date' dan 'price'"
+
+            df["price"] = df["price"].astype(str)
             df["price"] = df["price"].str.replace(".", "", regex=False)
             df["price"] = df["price"].str.replace(",", "", regex=False)
             df["price"] = pd.to_numeric(df["price"], errors="coerce")
 
-            if"date" not in df.columns or "price" not in df.columns:
-                return "Format file tidak sesuai. Kolom yang diperlukan: 'date' dan 'price'"
-            
+                        
             df = df.dropna(subset=["date", "price"])
             df = df[df["price"] > 0]
             

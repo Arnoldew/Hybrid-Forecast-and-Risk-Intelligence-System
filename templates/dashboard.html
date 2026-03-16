@@ -98,7 +98,8 @@
     const midDates = {{ mid_dates | tojson }};
     const midValues = {{ mid_values | tojson }};
     const longDates = {{ long_dates | tojson }};
-    const longValues = {{ long_values | tojson }};
+    const longEvalValues = {{ long_eval_values | tojson }};
+    const longProdValues = {{ long_prod_values | tojson }};
 
     {% if long_upper %}
     const longUpper = {{ long_upper | tojson }};
@@ -296,18 +297,6 @@
                 },
                 annotation: {
                     annotations: {
-                         trainZone: {
-                            type: 'box',
-                            xMin: '2022-01-01',
-                            xMax: '2024-12-31',
-                            backgroundColor: 'rgba(0,0,0,0.03)',
-                            borderWidth: 0,
-                            label: {
-                                display: true,
-                                content: 'Training Data',
-                                position: 'start'
-                            }
-                        },
                         trainingPhase: {
                             type: 'box',
                             xMin: '2022-01-01',
