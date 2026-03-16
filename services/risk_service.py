@@ -1,58 +1,72 @@
 import sqlite3
 import pandas as pd
-from config import DATABASE_PATH, RISK_WINDOW_DAYS
+from config import DATABASE_PATH, RISK_WINDOW_DAYS, TREND_WINDOW_DAYS, VOL_RECENT_DAYS, VOL_BASELINE_DAYS
 from models.risk_engine import (
-    calculate_volatility,
+    calculate_volatility_ratio,
+    calculate_trend_slope,
+    get_seasonal_baseline,
     forecast_deviation,
-    risk_scoring
+    risk_scoring,
+    generate_risk_message
 )
 
 
 def calculate_risk(df, forecast_series, horizon):
-    """Calculate risk score and level based on forecast and historical data
-    
-    Args:
-        df: DataFrame with price data
-        forecast_series: Series with forecasted values
-        horizon: 'short', 'mid', or 'long'
-        
+    """
+    Hitung risk score dan detail dari forecast dan data historis.
+
     Returns:
-        tuple: (score, level)
+        tuple: (score, level, direction, fdi_value, vol_ratio, trend_slope, message)
     """
     try:
         df = df.copy()
         df = df.asfreq("D")
         df["price"] = df["price"].interpolate(method="linear")
 
-        # Gunakan RISK_WINDOW_DAYS (30 hari) untuk kalkulasi FDI dan volatility
-        # bukan ROLLING_WINDOW_DAYS (365 hari) yang terlalu panjang untuk EWS
-        window = RISK_WINDOW_DAYS
-        moving_avg = df["price"].rolling(window).mean().iloc[-1]
-        rolling_std = df["price"].rolling(window).std().iloc[-1]
+        price = df["price"]
 
-        last_forecast_value = forecast_series.iloc[-1]
+        # --- 1. FDI ---
+        moving_avg  = price.rolling(RISK_WINDOW_DAYS).mean().iloc[-1]
+        rolling_std = price.rolling(RISK_WINDOW_DAYS).std().iloc[-1]
+        last_forecast = float(forecast_series.iloc[-1])
+        fdi = forecast_deviation(last_forecast, moving_avg, rolling_std)
 
-        fdi = forecast_deviation(last_forecast_value, moving_avg, rolling_std)
-
-        volatility_series = calculate_volatility(df["price"])
-        volatility_flag = (
-            volatility_series.iloc[-1] > 
-            volatility_series.rolling(90).mean().iloc[-1] * 1.2
+        # --- 2. Volatility ratio ---
+        vol_ratio = calculate_volatility_ratio(
+            price,
+            recent_days   = VOL_RECENT_DAYS,
+            baseline_days = VOL_BASELINE_DAYS
         )
 
-        ci_breach = abs(fdi) > 3  
+        # --- 3. Trend slope ---
+        trend_slope, trend_direction = calculate_trend_slope(price, window=TREND_WINDOW_DAYS)
 
-        score, level = risk_scoring(fdi, volatility_flag, ci_breach)
+        # --- 4. Seasonal deviation ---
+        anchor_month = df.index.max().month
+        seasonal_mean = get_seasonal_baseline(price, anchor_month)
+        seasonal_deviation = None
+        if seasonal_mean and seasonal_mean > 0:
+            seasonal_deviation = ((last_forecast - seasonal_mean) / seasonal_mean) * 100
 
-        print("FDI:", fdi)
-        print("Volatility flag:", volatility_flag)
-        print("CI breach", ci_breach)
+        # --- 5. Scoring ---
+        score, level, breakdown = risk_scoring(
+            fdi                = fdi,
+            vol_ratio          = vol_ratio,
+            trend_direction    = trend_direction,
+            seasonal_deviation = seasonal_deviation
+        )
 
-        return score, level
-    
+        # --- 6. Risk message ---
+        message = generate_risk_message(fdi, vol_ratio, trend_direction, level, horizon)
+
+        print(f"[{horizon}] FDI: {fdi:.3f} | Vol ratio: {vol_ratio:.2f} | "
+              f"Trend: {trend_direction} | Score: {score} | Level: {level}")
+
+        return score, level, trend_direction, fdi, vol_ratio, trend_slope, message
+
     except Exception as e:
-        print(f"Error calculating risk: {e}")
-        return 0, "Normal"
+        print(f"Error calculating risk [{horizon}]: {e}")
+        return 0, "Normal", "stable", 0.0, 1.0, 0.0, "Data tidak cukup untuk kalkulasi risiko."
 
 
 def save_risk(date, horizon, score, level):

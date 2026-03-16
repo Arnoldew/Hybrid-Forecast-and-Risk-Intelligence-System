@@ -4,6 +4,7 @@ import os
 import pandas as pd
 import json
 import sqlite3
+import math
 from utils.metrics import calculate_mape
 from services.forecast_service import generate_evaluation_forecasts
 from config import DATABASE_PATH, ROLLING_WINDOW_DAYS
@@ -42,6 +43,16 @@ def load_data():
         print(f"Error loading data: {e}")
         return pd.DataFrame()
 
+
+def safe_float(val, fallback=0.0):
+    """Konversi nilai ke float, return fallback jika NaN atau None."""
+    if val is None:
+        return fallback
+    try:
+        f = float(val)
+        return fallback if math.isnan(f) or math.isinf(f) else f
+    except:
+        return fallback
 
 @app.route("/")
 def dashboard():
@@ -93,19 +104,28 @@ def dashboard():
         
         # Risk Calculation 
         try:
-            short_score, short_level = calculate_risk(df, short_forecast, "short")
-            save_risk(str(df.index.max()), "short", short_score, short_level)
+            short_score, short_level, short_dir, short_fdi, short_vol, short_slope, short_msg = \
+                calculate_risk(df, short_forecast, "short")
+            save_risk(str(df.index.max()), "short", short_score, short_level,
+                    short_dir, short_fdi, short_vol, short_slope, short_msg)
 
-            mid_score, mid_level = calculate_risk(df, mid_forecast, "mid")
-            save_risk(str(df.index.max()), "mid", mid_score, mid_level)
+            mid_score, mid_level, mid_dir, mid_fdi, mid_vol, mid_slope, mid_msg = \
+                calculate_risk(df, mid_forecast, "mid")
+            save_risk(str(df.index.max()), "mid", mid_score, mid_level,
+                    mid_dir, mid_fdi, mid_vol, mid_slope, mid_msg)
 
-            long_score, long_level = calculate_risk(df, long_forecast, "long")
-            save_risk(str(df.index.max()), "long", long_score, long_level)
+            long_score, long_level, long_dir, long_fdi, long_vol, long_slope, long_msg = \
+                calculate_risk(df, long_forecast, "long")
+            save_risk(str(df.index.max()), "long", long_score, long_level,
+                    long_dir, long_fdi, long_vol, long_slope, long_msg)
         except Exception as e:
             print(f"Error calculating risk: {e}")
-            short_level = "Normal"
-            mid_level = "Normal"
-            long_level = "Normal"
+            short_level = short_dir = mid_level = mid_dir = long_level = long_dir = "Normal"
+            short_fdi = mid_fdi = long_fdi = 0.0
+            short_vol = mid_vol = long_vol = 1.0
+            short_slope = mid_slope = long_slope = 0.0
+            short_msg = mid_msg = long_msg = "Data tidak cukup untuk kalkulasi risiko."
+            short_score = mid_score = long_score = 0
 
         # =====================================================================
         # DATA UNTUK CHART (ACTUAL 2022–2025)
@@ -196,6 +216,26 @@ def dashboard():
             short_level=short_level,
             mid_level=mid_level,
             long_level=long_level,
+            # Risk scores baru
+            short_score=short_score,
+            mid_score=mid_score,
+            long_score=long_score,
+            # Risk direction
+            short_dir=short_dir,
+            mid_dir=mid_dir,
+            long_dir=long_dir,
+            # FDI values
+            short_fdi=round(short_fdi, 3),
+            mid_fdi=round(mid_fdi, 3),
+            long_fdi=round(long_fdi, 3),
+            # Volatility ratios
+            short_vol=round(short_vol, 2),
+            mid_vol=round(mid_vol, 2),
+            long_vol=round(long_vol, 2),
+            # Risk messages
+            short_msg=short_msg,
+            mid_msg=mid_msg,
+            long_msg=long_msg,
             # Forecast start markers
             short_forecast_start=short_forecast_start,
             mid_forecast_start=mid_forecast_start,

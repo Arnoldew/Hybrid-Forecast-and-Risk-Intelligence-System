@@ -71,4 +71,9 @@ MODEL_CACHE_TTL = 3600  # Cache for 1 hour (in seconds)
 
 # Data configuration
 ROLLING_WINDOW_DAYS = 365  # Display last 365 days in chart
-RISK_WINDOW_DAYS = 30 # Use 30 days for rolling calculations in risk engine   
+
+# Risk engine configuration
+RISK_WINDOW_DAYS    = 30   # window FDI + moving average
+TREND_WINDOW_DAYS   = 7    # window slope detection (tren jangka pendek)
+VOL_RECENT_DAYS     = 7    # window volatility "saat ini"
+VOL_BASELINE_DAYS   = 30   # window volatility "normal" sebagai pembanding   

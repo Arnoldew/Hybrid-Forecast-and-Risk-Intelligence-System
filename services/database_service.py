@@ -32,12 +32,17 @@ def init_db():
         # Table risk Status
         cursor.execute("""
         CREATE TABLE IF NOT EXISTS risk_status (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            date TEXT,
-            horizon TEXT,
-            risk_score INTEGER,
-            risk_level TEXT,
-            UNIQUE(date, horizon)
+            id           INTEGER PRIMARY KEY AUTOINCREMENT,
+            date         TEXT NOT NULL,
+            horizon      TEXT NOT NULL,
+            risk_score   INTEGER,
+            risk_level   TEXT,
+            direction    TEXT,
+            fdi_value    REAL,
+            vol_ratio    REAL,
+            trend_slope  REAL,
+            risk_message TEXT,
+            created_at   TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
         """)
 
@@ -47,6 +52,77 @@ def init_db():
     except Exception as e:
         print(f"Error initializing database: {e}")
 
+
+def save_risk(date, horizon, score, level, direction, fdi_value, vol_ratio, trend_slope, message):
+    """
+    Simpan hasil kalkulasi risiko ke database (append-only — tidak menghapus history).
+    """
+    try:
+        if isinstance(date, str):
+            try:
+                date = pd.to_datetime(date).strftime("%Y-%m-%d")
+            except:
+                pass
+
+        conn = sqlite3.connect(DATABASE_PATH)
+        cursor = conn.cursor()
+
+        cursor.execute("""
+        INSERT INTO risk_status 
+            (date, horizon, risk_score, risk_level, direction, fdi_value, vol_ratio, trend_slope, risk_message)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (date, horizon, int(score), level, direction,
+              round(float(fdi_value), 4), round(float(vol_ratio), 4),
+              round(float(trend_slope), 4), message))
+
+        conn.commit()
+        conn.close()
+
+    except Exception as e:
+        print(f"Error saving risk: {e}")
+
+
+def get_risk_history(horizon, limit=30):
+    """
+    Ambil history risk status untuk horizon tertentu.
+    Berguna untuk menampilkan tren risiko dari waktu ke waktu.
+    
+    Returns:
+        list of dict
+    """
+    try:
+        conn = sqlite3.connect(DATABASE_PATH)
+        cursor = conn.cursor()
+
+        cursor.execute("""
+            SELECT date, risk_score, risk_level, direction, fdi_value, vol_ratio, risk_message, created_at
+            FROM risk_status
+            WHERE horizon = ?
+            ORDER BY created_at DESC
+            LIMIT ?
+        """, (horizon, limit))
+
+        rows = cursor.fetchall()
+        conn.close()
+
+        return [
+            {
+                'date'        : r[0],
+                'score'       : r[1],
+                'level'       : r[2],
+                'direction'   : r[3],
+                'fdi_value'   : r[4],
+                'vol_ratio'   : r[5],
+                'message'     : r[6],
+                'created_at'  : r[7]
+            }
+            for r in rows
+        ]
+
+    except Exception as e:
+        print(f"Error getting risk history: {e}")
+        return []
+    
 
 def save_forecast(horizon, forecast_series):
     
