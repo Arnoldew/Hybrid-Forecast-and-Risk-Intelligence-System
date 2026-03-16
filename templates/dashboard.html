@@ -5,7 +5,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@2.2.0"></script>
     <style>
-        body{
+        body {
             font-family: Arial, sans-serif;
             margin: 40px;
             background-color: #f4f6f9;
@@ -17,88 +17,82 @@
             background: white;
             padding: 20px;
             border-radius: 12px;
-            box-shadow: 0 4px 10px rgba(0,0,0,1);
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
         }
-
-        .badge{
+        .badge {
             padding: 6px 12px;
             border-radius: 8px;
             color: white;
             font-weight: bold;
             display: inline-block;
         }
-        .normal { background-color: #2ecc71;}
-        .waspada { background-color: #f39c12;}
-        .bahaya { background-color: #e74c3c;}
+        .normal  { background-color: #2ecc71; }
+        .waspada { background-color: #f39c12; }
+        .bahaya  { background-color: #e74c3c; }
     </style>
 </head>
 <body>
     <h1>Hybrid Forecast & Risk Intelligence System</h1>
 
-    <p><I>Last Update : {{ last_update }}</I></p>
+    <p><i>Last Update : {{ last_update }}</i></p>
 
-    <h3>Short Term Status: 
+    <h3>Short Term Status:
         <span class="badge {{ short_level|lower }}">{{ short_level }}</span></h3>
-    
-    <h3>Mid Term Status: 
+    <h3>Mid Term Status:
         <span class="badge {{ mid_level|lower }}">{{ mid_level }}</span></h3>
-    
-    <h3>Long Term Status: 
+    <h3>Long Term Status:
         <span class="badge {{ long_level|lower }}">{{ long_level }}</span></h3>
 
-    
     <div style="background: white; padding: 15px; margin-top: 20px; border-radius: 8px;">
-        <b>Forecast Summary:</b><br>
+        <b>Forecast Summary (Evaluation 2025):</b><br>
         Short-Term Avg: Rp {{ short_avg }}<br>
         Mid-Term Avg: Rp {{ mid_avg }}<br>
         Long-Term Avg: Rp {{ long_avg }}
     </div>
 
-    <a href="/download">
-        <button style="padding: 8px 15px; margin-bottom: 15px;">
-            Download Forecast CSV
-        </button>
-    </a>
+    <div style="margin-top: 10px;">
+        <a href="/download">
+            <button style="padding: 8px 15px;">Download Forecast CSV</button>
+        </a>
+        <a href="/upload">
+            <button style="padding: 8px 15px;">Upload Monthly Data</button>
+        </a>
+    </div>
 
-    <a href="/upload">
-        <button style="padding: 8px 15px; margin-bottom: 10px;">
-            Upload Monthly Data
-        </button>
-    </a>
-
+    <br>
     <canvas id="priceChart" width="1000" height="400"></canvas>
 
-    <h3>
-        Volatility (30-Day Rolling Std)
-    </h3>
+    <h3>Volatility (30-Day Rolling Std)</h3>
     <canvas id="volChart" width="1000" height="250"></canvas>
-    
 
     <div style="margin-top: 20px; background: white; padding: 15px; border-radius: 8px;">
         <b>Risk Classification Rule:</b><br>
-        Normal -> Deviasi < 3 Standar deviasi<br>
-        Waspada -> Deviasi signifikan atau volatilitas meningkat<br>
-        Bahaya -> Deviasi > 3 standar deviasi dari rata-rata 30 hari terakhir
+        Normal &rarr; Deviasi &lt; 1 standar deviasi dari rata-rata 30 hari<br>
+        Waspada &rarr; Deviasi signifikan atau volatilitas meningkat<br>
+        Bahaya &rarr; Deviasi &gt; 3 standar deviasi dari rata-rata 30 hari
     </div>
 
     <script>
-    const ctx = document.getElementById('priceChart').getContext('2d');
+    const ctx    = document.getElementById('priceChart').getContext('2d');
     const volCtx = document.getElementById('volChart').getContext('2d');
 
-    // All dates untuk timeline lengkap
+    // Timeline lengkap
     const allDates = {{ all_dates | tojson }};
-    
-    // Chart data (historical + actual)
-    const chartDates = {{ chart_dates | tojson }};
+
+    // Data aktual
+    const chartDates  = {{ chart_dates | tojson }};
     const chartPrices = {{ chart_prices | tojson }};
-    
-    // Forecast data
-    const shortDates = {{ short_dates | tojson }};
-    const shortValues = {{ short_values | tojson }};
-    const midDates = {{ mid_dates | tojson }};
-    const midValues = {{ mid_values | tojson }};
-    const longDates = {{ long_dates | tojson }};
-    const longEvalValues = {{ long_eval_values | tojson }};
+
+    // Evaluation forecast (2025 backtest)
+    const shortDates      = {{ short_dates | tojson }};
+    const shortValues     = {{ short_values | tojson }};
+    const midDates        = {{ mid_dates | tojson }};
+    const midValues       = {{ mid_values | tojson }};
+    const longDates       = {{ long_dates | tojson }};
+    const longEvalValues  = {{ long_eval_values | tojson }};
+
+    // Production forecast (2026+) — dates TERPISAH dari eval dates
+    const longProdDates  = {{ long_prod_dates | tojson }};
     const longProdValues = {{ long_prod_values | tojson }};
 
     {% if long_upper %}
@@ -109,20 +103,21 @@
     const longLower = null;
     {% endif %}
 
-    const volDates = {{ vol_dates | tojson }};
-    const volValues = {{ vol_values | tojson}};
+    // Volatility
+    const volDates  = {{ vol_dates | tojson }};
+    const volValues = {{ vol_values | tojson }};
 
-    // Forecast start dates untuk setiap horizon
+    // Forecast start markers
     const shortForecastStart = "{{ short_forecast_start }}";
-    const midForecastStart = "{{ mid_forecast_start }}";
-    const longForecastStart = "{{ long_forecast_start }}";
+    const midForecastStart   = "{{ mid_forecast_start }}";
+    const longForecastStart  = "{{ long_forecast_start }}";
 
-    // Mape Evalution
+    // MAPE
     const mapeShort = {{ mape_short | default(0) }};
-    const mapeMid = {{ mape_mid | default(0) }};
-    const mapeLong = {{ mape_long | default(0) }};
+    const mapeMid   = {{ mape_mid   | default(0) }};
+    const mapeLong  = {{ mape_long  | default(0) }};
 
-    // Fungsi untuk memetakan nilai ke timeline lengkap
+    // Petakan nilai ke timeline lengkap
     function buildSeries(allDates, dataDateList, dataValueList) {
         return allDates.map(date => {
             const index = dataDateList.indexOf(date);
@@ -132,24 +127,39 @@
 
     Chart.register(window['chartjs-plugin-annotation']);
 
-    // Volatility Chart
+    // =====================================================================
+    // VOLATILITY CHART
+    // =====================================================================
     new Chart(volCtx, {
         type: 'line',
         data: {
             labels: volDates,
             datasets: [{
-                label: 'Volatility',
+                label: 'Volatility (30-day std)',
                 data: volValues,
                 borderColor: 'purple',
                 borderWidth: 2,
-                fill: false
+                fill: false,
+                pointRadius: 0,
+                tension: 0.1
             }]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                y: { title: { display: true, text: 'Std Dev (Rp)' } }
+            },
+            plugins: {
+                legend: { display: true, position: 'top' }
+            }
         }
     });
 
-    // Build annotations untuk 3 forecast start lines
+    // =====================================================================
+    // ANNOTATION — vertical lines untuk forecast start
+    // =====================================================================
     const annotations = {};
-    
+
     if (shortForecastStart) {
         annotations.shortForecastStart = {
             type: 'line',
@@ -158,14 +168,9 @@
             borderColor: 'green',
             borderWidth: 2,
             borderDash: [5, 5],
-            label: {
-                display: true,
-                content: 'Short-Term Start',
-                position: 'top'
-            }
+            label: { display: true, content: 'Short-Term Start', position: 'top' }
         };
     }
-    
     if (midForecastStart) {
         annotations.midForecastStart = {
             type: 'line',
@@ -174,14 +179,9 @@
             borderColor: 'orange',
             borderWidth: 2,
             borderDash: [5, 5],
-            label: {
-                display: true,
-                content: 'Mid-Term Start',
-                position: 'top'
-            }
+            label: { display: true, content: 'Mid-Term Start', position: 'top' }
         };
     }
-    
     if (longForecastStart) {
         annotations.longForecastStart = {
             type: 'line',
@@ -190,99 +190,102 @@
             borderColor: 'red',
             borderWidth: 2,
             borderDash: [5, 5],
-            label: {
-                display: true,
-                content: 'Long-Term Start',
-                position: 'top'
-            }
+            label: { display: true, content: 'Long-Term Start', position: 'top' }
         };
     }
 
-    // Price Chart dengan forecast overlay
+    // =====================================================================
+    // PRICE CHART
+    // =====================================================================
+    const datasets = [
+        {
+            label: 'Historical & Actual Price',
+            data: buildSeries(allDates, chartDates, chartPrices),
+            borderColor: 'black',
+            borderWidth: 2.5,
+            fill: false,
+            pointRadius: 0,
+            tension: 0
+        },
+        {
+            label: 'Short-Term Forecast — Eval (ARIMA)',
+            data: buildSeries(allDates, shortDates, shortValues),
+            borderColor: 'green',
+            borderWidth: 2,
+            fill: false,
+            pointRadius: 0,
+            tension: 0.1
+        },
+        {
+            label: 'Mid-Term Forecast — Eval (Prophet)',
+            data: buildSeries(allDates, midDates, midValues),
+            borderColor: 'orange',
+            borderWidth: 2,
+            fill: false,
+            pointRadius: 0,
+            tension: 0.1
+        },
+        {
+            label: 'Long-Term Forecast — Eval (ARIMA)',
+            data: buildSeries(allDates, longDates, longEvalValues),
+            borderColor: 'red',
+            borderWidth: 2,
+            fill: false,
+            pointRadius: 0,
+            tension: 0.1
+        },
+        {
+            label: 'Long-Term Forecast — Prediksi (ARIMA)',
+            data: buildSeries(allDates, longProdDates, longProdValues),
+            borderColor: 'darkred',
+            borderWidth: 2,
+            borderDash: [8, 4],
+            fill: false,
+            pointRadius: 0,
+            tension: 0.1
+        }
+    ];
+
+    // Tambahkan confidence interval jika tersedia
+    if (longUpper && longLower) {
+        datasets.splice(4, 0,
+            {
+                label: 'Long-Term Upper Bound',
+                data: buildSeries(allDates, longProdDates, longUpper),
+                borderColor: 'rgba(139,0,0,0.25)',
+                backgroundColor: 'rgba(139,0,0,0.06)',
+                fill: '+1',
+                pointRadius: 0,
+                tension: 0.1,
+                borderWidth: 1
+            },
+            {
+                label: 'Long-Term Lower Bound',
+                data: buildSeries(allDates, longProdDates, longLower),
+                borderColor: 'rgba(139,0,0,0.25)',
+                fill: false,
+                pointRadius: 0,
+                tension: 0.1,
+                borderWidth: 1
+            }
+        );
+    }
+
     new Chart(ctx, {
         type: 'line',
         data: {
             labels: allDates,
-            datasets: [
-                {
-                    label: 'Historical & Actual Price',
-                    data: buildSeries(allDates, chartDates, chartPrices),
-                    borderColor: 'black',
-                    borderWidth: 2.5,
-                    fill: false,
-                    pointRadius: 0,
-                    tension: 0
-                },
-                {
-                    label: 'Short-Term Forecast (PROPHET)',
-                    data: buildSeries(allDates, shortDates, shortValues),
-                    borderColor: 'green',
-                    borderWidth: 2,
-                    fill: false,
-                    pointRadius: 0,
-                    tension: 0.1
-                },
-                {
-                    label: 'Mid-Term Forecast (PROPHET)',
-                    data: buildSeries(allDates, midDates, midValues),
-                    borderColor: 'orange',
-                    borderWidth: 2,
-                    fill: false,
-                    pointRadius: 0,
-                    tension: 0.1
-                },
-                {% if long_upper %}
-                {
-                    label: 'Long-Term Upper Bound',
-                    data: buildSeries(allDates, longDates, longUpper),
-                    borderColor: 'rgba(255,0,0,0.3)',
-                    backgroundColor: 'rgba(255,0,0,0.05)',
-                    fill: {
-                        target: '+1'
-                    },
-                    pointRadius: 0,
-                    tension: 0.1
-                },
-                {
-                    label: 'Long-Term Lower Bound',
-                    data: buildSeries(allDates, longDates, longLower),
-                    borderColor: 'rgba(255,0,0,0.3)',
-                    fill: false,
-                    pointRadius: 0,
-                    tension: 0.1
-                },
-                {% endif %}
-                {
-                    label: 'Long-Term Forecast (ARIMA)',
-                    data: buildSeries(allDates, longDates, longEvalValues),
-                    borderColor: 'red',
-                    borderWidth: 2,
-                    fill: false,
-                    pointRadius: 0,
-                    tension: 0.1
-                },
-                {
-                    label: 'Long-Term Forecast - Prediksi',
-                    data: buildSeries(allDates, longDates, longProdValues),   // ← pakai production
-                    borderColor: 'darkred',
-                }
-            ]
+            datasets: datasets
         },
         options: {
             responsive: true,
-            interaction: {
-                mode: 'index',
-                intersect: false,
-            },
+            interaction: { mode: 'index', intersect: false },
             scales: {
                 y: {
-                    title: {
-                        display: true,
-                        text: 'Harga (Ribuan Rupiah)'
-                    },
+                    title: { display: true, text: 'Harga (Rp)' },
                     ticks: {
                         callback: function(value) {
-                            return 'Rp ' + (value * 1000).toLocaleString('id-ID');
+                            return 'Rp ' + value.toLocaleString('id-ID');
                         }
                     }
                 }
@@ -292,7 +295,7 @@
                     display: true,
                     text: [
                         'Hybrid Forecast Price Chart',
-                        `MAPE: Short: ${mapeShort}% | Mid: ${mapeMid}% | Long: ${mapeLong}%`
+                        `MAPE — Short: ${mapeShort}% | Mid: ${mapeMid}% | Long: ${mapeLong}%`
                     ]
                 },
                 annotation: {
@@ -305,7 +308,7 @@
                             borderWidth: 0,
                             label: {
                                 display: true,
-                                content: 'Training Phase',
+                                content: 'Training Phase'
                             }
                         },
                         testingPhase: {
@@ -320,7 +323,7 @@
                                 position: 'start'
                             }
                         },
-                    ...annotations
+                        ...annotations
                     }
                 },
                 tooltip: {
@@ -329,19 +332,15 @@
                             let value = context.parsed.y;
                             if (value === null) return '';
                             return context.dataset.label + ': Rp ' +
-                                (value * 1000).toLocaleString('id-ID');
+                                value.toLocaleString('id-ID');
                         }
                     }
                 },
-                legend: {
-                    display: true,
-                    position: 'top'
-                }
+                legend: { display: true, position: 'top' }
             }
         }
     });
     </script>
-
 
 </body>
 </html>

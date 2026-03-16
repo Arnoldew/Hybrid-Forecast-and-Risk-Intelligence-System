@@ -1,8 +1,6 @@
 import sqlite3
 import pandas as pd
-from config import RISK_WINDOW_DAYS
-window = RISK_WINDOW_DAYS
-from config import DATABASE_PATH, ROLLING_WINDOW_DAYS
+from config import DATABASE_PATH, RISK_WINDOW_DAYS
 from models.risk_engine import (
     calculate_volatility,
     forecast_deviation,
@@ -26,8 +24,9 @@ def calculate_risk(df, forecast_series, horizon):
         df = df.asfreq("D")
         df["price"] = df["price"].interpolate(method="linear")
 
-        # Use config for rolling window instead of hardcoded value
-        window = ROLLING_WINDOW_DAYS if ROLLING_WINDOW_DAYS else 30
+        # Gunakan RISK_WINDOW_DAYS (30 hari) untuk kalkulasi FDI dan volatility
+        # bukan ROLLING_WINDOW_DAYS (365 hari) yang terlalu panjang untuk EWS
+        window = RISK_WINDOW_DAYS
         moving_avg = df["price"].rolling(window).mean().iloc[-1]
         rolling_std = df["price"].rolling(window).std().iloc[-1]
 
@@ -53,7 +52,6 @@ def calculate_risk(df, forecast_series, horizon):
     
     except Exception as e:
         print(f"Error calculating risk: {e}")
-        # Return default values on error
         return 0, "Normal"
 
 
@@ -67,14 +65,12 @@ def save_risk(date, horizon, score, level):
         level: Risk level string ('Normal', 'Waspada', 'Bahaya')
     """
     try:
-        # Ensure date is in correct format
         if isinstance(date, str):
-            # Try to parse and reformat
             try:
                 date_obj = pd.to_datetime(date)
                 date = date_obj.strftime("%Y-%m-%d")
             except:
-                pass  # Keep original string if parsing fails
+                pass
         
         conn = sqlite3.connect(DATABASE_PATH)
         cursor = conn.cursor()
@@ -93,4 +89,3 @@ def save_risk(date, horizon, score, level):
         
     except Exception as e:
         print(f"Error saving risk: {e}")
-
