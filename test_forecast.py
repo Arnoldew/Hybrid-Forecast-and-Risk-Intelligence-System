@@ -3,7 +3,7 @@ import numpy as np
 
 from models.arima_model import train_arima, forecast_arima, evaluate_forecast
 from models.prophet_model import train_prophet, forecast_prophet
-from models.risk_engine import calculate_volatility, forecast_deviation, risk_scoring
+from models.risk_engine import calculate_volatility_ratio, forecast_deviation, risk_scoring
 import os
 
 # =========================

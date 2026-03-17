@@ -9,8 +9,8 @@ from utils.metrics import calculate_mape
 from services.forecast_service import generate_evaluation_forecasts
 from config import DATABASE_PATH, ROLLING_WINDOW_DAYS
 from datetime import datetime
-from services.risk_service import calculate_risk, save_risk
-from services.database_service import init_db, save_forecast
+from services.risk_service import calculate_risk
+from services.database_service import init_db, save_forecast, save_risk
 from services.forecast_service import (
     forecast_short_term,
     forecast_mid_term,
@@ -83,20 +83,20 @@ def dashboard():
         actual_mid   = df["price"].reindex(eval_mid.index).dropna()
         actual_long  = df["price"].reindex(eval_long.index).dropna()
 
-        mape_short = calculate_mape(
+        mape_short = safe_float(calculate_mape(
             actual_short.values,
             eval_short.loc[actual_short.index].values
-        ) if len(actual_short) > 0 else 0.0
+        ) if len(actual_short) > 0 else 0.0)
 
-        mape_mid = calculate_mape(
+        mape_mid = safe_float(calculate_mape(
             actual_mid.values,
             eval_mid.loc[actual_mid.index].values
-        ) if len(actual_mid) > 0 else 0.0
+        ) if len(actual_mid) > 0 else 0.0)
 
-        mape_long = calculate_mape(
+        mape_long = safe_float(calculate_mape(
             actual_long.values,
             eval_long.loc[actual_long.index].values
-        ) if len(actual_long) > 0 else 0.0
+        ) if len(actual_long) > 0 else 0.0)
 
         save_forecast("short", short_forecast)
         save_forecast("mid", mid_forecast)
@@ -131,7 +131,7 @@ def dashboard():
         # DATA UNTUK CHART (ACTUAL 2022–2025)
         # =====================================================================
         df_chart_data = df.loc[
-            (df.index >= pd.Timestamp("2022-01-01")) &
+            (df.index >= pd.Timestamp("2019-01-01")) &
             (df.index <= pd.Timestamp("2025-12-31"))
         ].copy()
 
@@ -173,9 +173,13 @@ def dashboard():
         )))
 
         # Averages (dari eval values untuk summary)
-        short_avg    = round(sum(short_values)/len(short_values), 2)       if short_values     else 0
-        mid_avg      = round(sum(mid_values)/len(mid_values), 2)           if mid_values       else 0
-        long_avg     = round(sum(long_eval_values)/len(long_eval_values), 2) if long_eval_values else 0
+        short_clean = [v for v in short_values     if v is not None and not math.isnan(v)]
+        mid_clean   = [v for v in mid_values       if v is not None and not math.isnan(v)]
+        long_clean  = [v for v in long_eval_values if v is not None and not math.isnan(v)]
+
+        short_avg = round(sum(short_clean)/len(short_clean), 2) if short_clean else 0
+        mid_avg   = round(sum(mid_clean)/len(mid_clean), 2)     if mid_clean   else 0
+        long_avg  = round(sum(long_clean)/len(long_clean), 2)   if long_clean  else 0
 
         last_update = datetime.now().strftime("%d %B %Y %H:%M")
 
@@ -249,9 +253,9 @@ def dashboard():
             vol_dates=vol_dates,
             vol_values=vol_values,
             # MAPE
-            mape_short=round(mape_short, 2),
-            mape_mid=round(mape_mid, 2),
-            mape_long=round(mape_long, 2)
+            mape_short=round(safe_float(mape_short), 2),
+            mape_mid=round(safe_float(mape_mid), 2),
+            mape_long=round(safe_float(mape_long), 2)
         )
         
     except Exception as e:

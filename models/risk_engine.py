@@ -20,22 +20,6 @@ def calculate_volatility_ratio(price_series, recent_days=7, baseline_days=30):
     return float(recent_std / baseline_std)
 
 
-def forecast_deviation(forecast_value, moving_avg, rolling_std):
-    """Calculate Forecast Deviation Index (FDI)
-    
-    Args:
-        forecast_value: The forecasted price
-        moving_avg: 30-day moving average
-        rolling_std: 30-day rolling standard deviation
-        
-    Returns:
-        FDI value (z-score)
-    """
-    # Handle edge case where rolling_std is 0 or very small
-    if rolling_std is None or rolling_std == 0 or abs(rolling_std) < 1e-10:
-        return 0 
-    return (forecast_value - moving_avg) / rolling_std
-
 def calculate_trend_slope(price_series, window=7):
     """
     Hitung slope tren harga menggunakan linear regression.

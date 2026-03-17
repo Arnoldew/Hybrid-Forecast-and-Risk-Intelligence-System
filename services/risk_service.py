@@ -68,38 +68,3 @@ def calculate_risk(df, forecast_series, horizon):
         print(f"Error calculating risk [{horizon}]: {e}")
         return 0, "Normal", "stable", 0.0, 1.0, 0.0, "Data tidak cukup untuk kalkulasi risiko."
 
-
-def save_risk(date, horizon, score, level):
-    """Save risk calculation result to database
-    
-    Args:
-        date: Date string (YYYY-MM-DD format)
-        horizon: 'short', 'mid', or 'long'
-        score: Risk score (integer)
-        level: Risk level string ('Normal', 'Waspada', 'Bahaya')
-    """
-    try:
-        if isinstance(date, str):
-            try:
-                date_obj = pd.to_datetime(date)
-                date = date_obj.strftime("%Y-%m-%d")
-            except:
-                pass
-        
-        conn = sqlite3.connect(DATABASE_PATH)
-        cursor = conn.cursor()
-
-        cursor.execute("""
-            DELETE FROM risk_status WHERE horizon = ?
-        """, (horizon,))
-
-        cursor.execute("""
-        INSERT INTO risk_status (date, horizon, risk_score, risk_level)
-        VALUES (?, ?, ?, ?)
-        """, (date, horizon, score, level))
-
-        conn.commit()
-        conn.close()
-        
-    except Exception as e:
-        print(f"Error saving risk: {e}")
