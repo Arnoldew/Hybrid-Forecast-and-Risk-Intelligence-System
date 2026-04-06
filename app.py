@@ -186,7 +186,7 @@ def dashboard():
         # Volatility (30-day rolling std, filter ke rentang chart)
         volatility = df['price'].rolling(30).std()
         vol_filtered = volatility.loc[
-            (volatility.index >= pd.Timestamp("2022-01-01")) &
+            (volatility.index >= pd.Timestamp("2019-01-01")) &
             (volatility.index <= pd.Timestamp("2025-12-31"))
         ]
         vol_dates  = vol_filtered.index.strftime('%Y-%m-%d').tolist()

@@ -32,6 +32,8 @@ def calculate_risk(df, forecast_series, horizon):
         fdi = forecast_deviation(last_forecast, moving_avg, rolling_std)
 
         # --- 2. Volatility ratio ---
+        recent_std = price.rolling(VOL_RECENT_DAYS).std().iloc[-1]
+        baseline_std = price.rolling(VOL_BASELINE_DAYS).std().iloc[-1]
         vol_ratio = calculate_volatility_ratio(
             price,
             recent_days   = VOL_RECENT_DAYS,
@@ -59,8 +61,11 @@ def calculate_risk(df, forecast_series, horizon):
         # --- 6. Risk message ---
         message = generate_risk_message(fdi, vol_ratio, trend_direction, level, horizon)
 
-        print(f"[{horizon}] FDI: {fdi:.3f} | Vol ratio: {vol_ratio:.2f} | "
-              f"Trend: {trend_direction} | Score: {score} | Level: {level}")
+        print(f"[{horizon}] FDI: {fdi:.3f} (forecast={last_forecast:.0f}, "
+              f"avg={moving_avg:.0f}, std={rolling_std:.2f}) | "
+              f"Vol ratio: {vol_ratio:.2f} (recent_std={recent_std if 'recent_std' in locals() else 'N/A'}, baseline_std={baseline_std if 'baseline_std' in locals() else 'N/A'}) | "
+              f"Trend: {trend_direction} (slope={trend_slope:.4f}) | "
+              f"Score: {score} | Level: {level}")
 
         return score, level, trend_direction, fdi, vol_ratio, trend_slope, message
 
