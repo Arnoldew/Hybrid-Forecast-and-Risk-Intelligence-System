@@ -1,5 +1,6 @@
 import sqlite3
 import pandas as pd 
+from datetime import datetime
 from config import DATABASE_PATH
 
 
@@ -61,8 +62,15 @@ def save_risk(date, horizon, score, level, direction, fdi_value, vol_ratio, tren
         if isinstance(date, str):
             try:
                 date = pd.to_datetime(date).strftime("%Y-%m-%d")
-            except:
-                pass
+            except (ValueError, TypeError) as e:
+                print(f"Warning: Could not parse date '{date}': {e}")
+                date = datetime.now().strftime("%Y-%m-%d")
+        
+        # Validasi nilai numerik sebelum INSERT
+        fdi_value   = float(fdi_value)   if fdi_value   is not None else 0.0
+        vol_ratio   = float(vol_ratio)   if vol_ratio   is not None else 1.0
+        trend_slope = float(trend_slope) if trend_slope is not None else 0.0
+        score       = int(score)         if score       is not None else 0
 
         conn = sqlite3.connect(DATABASE_PATH)
         cursor = conn.cursor()
@@ -79,7 +87,7 @@ def save_risk(date, horizon, score, level, direction, fdi_value, vol_ratio, tren
         conn.close()
 
     except Exception as e:
-        print(f"Error saving risk: {e}")
+        print(f"Error saving risk [{horizon}]: {e}")
 
 
 def get_risk_history(horizon, limit=30):

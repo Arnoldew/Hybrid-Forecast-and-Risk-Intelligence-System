@@ -5,19 +5,41 @@ from scipy import stats
 
 def calculate_volatility_ratio(price_series, recent_days=7, baseline_days=30):
     """
-    Hitung rasio volatilitas: current vs baseline.
-    Rasio > 1.2 berarti volatilitas saat ini 20% lebih tinggi dari normal.
+    Hitung rasio volatilitas: recent vs baseline.
     
-    Returns:
-        float: rasio volatilitas (1.0 = normal, >1.2 = meningkat)
+    Perbaikan:
+    - Handle NaN pada recent_std (data tidak continuous / semua nilai sama)
+    - Fallback ke window yang lebih lebar jika data 7 hari terlalu sedikit/flat
+    - Guard semua edge case sebelum pembagian
     """
-    recent_std   = price_series.rolling(recent_days).std().iloc[-1]
-    baseline_std = price_series.rolling(baseline_days).std().iloc[-1]
+    # Pastikan data bersih — drop NaN sebelum rolling
+    clean_series = price_series.dropna()
 
-    if baseline_std is None or baseline_std == 0 or np.isnan(baseline_std):
+    if len(clean_series) < baseline_days:
+        return 1.0  # data tidak cukup untuk baseline, anggap normal
+
+    recent_std   = clean_series.rolling(recent_days).std().iloc[-1]
+    baseline_std = clean_series.rolling(baseline_days).std().iloc[-1]
+
+    # Guard baseline
+    if baseline_std is None or np.isnan(baseline_std) or baseline_std < 1e-10:
         return 1.0
 
-    return float(recent_std / baseline_std)
+    # Guard recent — jika NaN atau 0 (data flat/identik), 
+    # coba window yang lebih lebar (14 hari) sebagai fallback
+    if recent_std is None or np.isnan(recent_std) or recent_std < 1e-10:
+        fallback_std = clean_series.rolling(14).std().iloc[-1]
+        if fallback_std is None or np.isnan(fallback_std) or fallback_std < 1e-10:
+            # Semua window flat — kemungkinan data konstan, kembalikan 0.5
+            # (lebih rendah dari normal, bukan 1.0, karena data flat itu sendiri
+            # adalah sinyal bahwa sesuatu tidak beres dengan data)
+            return 0.5
+        recent_std = fallback_std
+
+    ratio = float(recent_std / baseline_std)
+
+    # Sanity check — ratio tidak boleh negatif atau sangat ekstrem (> 20x)
+    return max(0.0, min(ratio, 20.0))
 
 
 def calculate_trend_slope(price_series, window=7):
