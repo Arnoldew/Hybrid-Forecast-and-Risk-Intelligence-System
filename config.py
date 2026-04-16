@@ -24,7 +24,7 @@ FORECAST_MODELS = {
     'mid': {
         'days': MID_TERM_DAYS,
         'model': 'prophet',
-        'train_end': '2025-07-30',
+        'train_end': '2025-07-31',
         'test_start': '2025-08-01',
         'test_end': '2026-01-31'
     },
@@ -40,14 +40,15 @@ FORECAST_MODELS = {
 # =========================================
 # Evaluation Forecast Window (2025)
 # =========================================
+# Untuk backtesting dan validasi model akurasi di tahun 2025
+# Gunakan MODEL dan TRAIN_END yang SAMA dengan FORECAST_MODELS
 
 EVAL_WINDOWS = {
-
-    "long": {
-        "train_end": "2024-12-31",
-        "forecast_start": "2025-01-01",
+    "short": {
+        "train_end": "2025-11-30",
+        "forecast_start": "2025-12-01",
         "forecast_end": "2025-12-31",
-        "model": "arima"
+        "model": "prophet"
     },
 
     "mid": {
@@ -57,12 +58,13 @@ EVAL_WINDOWS = {
         "model": "prophet"
     },
 
-    "short": {
-        "train_end": "2025-11-30",
-        "forecast_start": "2025-12-01",
+    "long": {
+        "train_end": "2024-12-31",
+        "forecast_start": "2025-01-01",
         "forecast_end": "2025-12-31",
         "model": "arima"
     }
+
 }
 
 # Model caching configuration

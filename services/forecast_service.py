@@ -76,14 +76,7 @@ def forecast_horizon(df, horizon_name):
             full_series = pd.Series(forecast, index=full_index).clip(lower=0)
 
             # Untuk visualisasi: tampilkan hanya bagian yang sesuai start window horizon
-            display_start = forecast_end - pd.Timedelta(days=days - 1)
-            if days >= 30:
-                if horizon_name == "short":
-                    display_start = forecast_end - pd.Timedelta(days=30 - 1)
-                elif horizon_name == "mid":
-                    display_start = forecast_end - pd.Timedelta(days=180 - 1)
-                elif horizon_name == "long":
-                    display_start = forecast_start
+            display_start = forecast_start
 
             return full_series.loc[full_series.index >= display_start]
 
@@ -105,12 +98,8 @@ def forecast_horizon(df, horizon_name):
     full_series = pd.Series(forecast, index=full_index).clip(lower=0)
 
     # Untuk visualisasi: start window sesuai horizon (short=30, mid=180, long=365)
-    if horizon_name == "short":
-        display_start = forecast_end - pd.Timedelta(days=30 - 1)
-    elif horizon_name == "mid":
-        display_start = forecast_end - pd.Timedelta(days=180 - 1)
-    else:
-        display_start = forecast_start
+    display_start = forecast_start
+    
 
     return full_series.loc[full_series.index >= display_start]
 
@@ -140,7 +129,7 @@ def generate_evaluation_forecasts(df):
         model = None
         cache_key = f"eval_{horizon}_{cfg['train_end'].replace('-','')}"
 
-        train_df = df.loc[:cfg["train_end"]]
+        train_df = df.loc[:cfg["train_end"]].copy()
         start = pd.to_datetime(cfg["forecast_start"])
         end = pd.to_datetime(cfg["forecast_end"])
         steps = (end - start).days + 1
