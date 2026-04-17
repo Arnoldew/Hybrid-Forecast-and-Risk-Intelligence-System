@@ -17,9 +17,9 @@ FORECAST_MODELS = {
     'short': {
         'days': SHORT_TERM_DAYS,
         'model': 'prophet',
-        'train_end': '2025-12-31',
-        'test_start': '2026-01-01',
-        'test_end': '2026-01-31'
+        'train_end': '2026-01-31',
+        'test_start': '2026-02-01',
+        'test_end': '2026-08-31'
     },
     'mid': {
         'days': MID_TERM_DAYS,
@@ -31,9 +31,9 @@ FORECAST_MODELS = {
     'long': {
         'days': LONG_TERM_DAYS,
         'model': 'arima',
-        'train_end': '2025-01-31',
-        'test_start': '2025-02-01',
-        'test_end': '2026-01-31'
+        'train_end': '2026-01-31',
+        'test_start': '2026-02-01',
+        'test_end': '2027-01-31'
     }
 }
 
