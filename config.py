@@ -1,3 +1,5 @@
+# config.py
+
 import os
 
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
@@ -12,7 +14,7 @@ LONG_TERM_DAYS = 365
 # Model selection based on evaluation results
 # Short Term: PROPHET (RMSE: 61,874.25)
 # Mid Term: PROPHET (RMSE: 30,697.56)
-# Long Term: ARIMA (RMSE: 27,088.97)
+# Long Term: PROPHET (RMSE: 19,002.02) ← CHANGED from ARIMA!
 FORECAST_MODELS = {
     'short': {
         'days': SHORT_TERM_DAYS,
@@ -30,7 +32,7 @@ FORECAST_MODELS = {
     },
     'long': {
         'days': LONG_TERM_DAYS,
-        'model': 'arima',
+        'model': 'prophet',  # ← CHANGED from 'arima'
         'train_end': '2026-01-31',
         'test_start': '2026-02-01',
         'test_end': '2027-01-31'
@@ -62,7 +64,7 @@ EVAL_WINDOWS = {
         "train_end": "2024-12-31",
         "forecast_start": "2025-01-01",
         "forecast_end": "2025-12-31",
-        "model": "arima"
+        "model": "prophet"  # ← CHANGED from 'arima'
     }
 
 }
@@ -78,4 +80,4 @@ ROLLING_WINDOW_DAYS = 365  # Display last 365 days in chart
 RISK_WINDOW_DAYS    = 30   # window FDI + moving average
 TREND_WINDOW_DAYS   = 7    # window slope detection (tren jangka pendek)
 VOL_RECENT_DAYS     = 7    # window volatility "saat ini"
-VOL_BASELINE_DAYS   = 30   # window volatility "normal" sebagai pembanding   
+VOL_BASELINE_DAYS   = 30   # window volatility "normal" sebagai pembanding
