@@ -149,7 +149,7 @@
 
 
     <div style="background: white; padding: 15px; margin-top: 20px; border-radius: 8px;">
-        <b>Forecast Summary (Evaluation 2025):</b><br>
+        <b>Forecast Summary (EVALUATION FORECAST AVERAGES):</b><br>
         Short-Term Avg: Rp {{ short_avg }}<br>
         Mid-Term Avg: Rp {{ mid_avg }}<br>
         Long-Term Avg: Rp {{ long_avg }}
@@ -313,7 +313,7 @@
             tension: 0
         },
         {
-            label: 'Short-Term Forecast — Eval (ARIMA)',
+            label: 'Short-Term Forecast — Eval (PROPHET)',
             data: buildSeries(allDates, shortDates, shortValues),
             borderColor: 'green',
             borderWidth: 2,
@@ -322,7 +322,7 @@
             tension: 0.1
         },
         {
-            label: 'Mid-Term Forecast — Eval (Prophet)',
+            label: 'Mid-Term Forecast — Eval (PROPHET)',
             data: buildSeries(allDates, midDates, midValues),
             borderColor: 'orange',
             borderWidth: 2,
@@ -331,7 +331,7 @@
             tension: 0.1
         },
         {
-            label: 'Long-Term Forecast — Eval (ARIMA)',
+            label: 'Long-Term Forecast — Eval (PROPHET)',
             data: buildSeries(allDates, longDates, longEvalValues),
             borderColor: 'red',
             borderWidth: 2,
@@ -340,7 +340,7 @@
             tension: 0.1
         },
         {
-            label: 'Long-Term Forecast — Prediksi (ARIMA)',
+            label: 'Long-Term Forecast — Prediksi (PROPHET)',
             data: buildSeries(allDates, longProdDates, longProdValues),
             borderColor: 'darkred',
             borderWidth: 2,

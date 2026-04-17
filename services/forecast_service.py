@@ -30,10 +30,10 @@ def forecast_horizon(df, horizon_name):
     Generic function untuk forecast semua horizon dengan skema sesuai konteks:
 
     - Garis hitam = data aktual (tahun target tetap actual, bukan hasil forecast)
-    - Garis forecast (short/mid/long) dimulai pada "start window" masing-masing:
-        short:  1 bulan terakhir dari horizon window (≈ 30 hari terakhir)
-        mid:    6 bulan terakhir dari horizon window (≈ 180 hari terakhir)
-        long:   12 bulan terakhir dari horizon window (≈ 365 hari terakhir)
+    - Garis forecast dimulai pada forecast_start dan menampilkan SELURUH horizon:
+        short:  30 hari forecast penuh
+        mid:    180 hari forecast penuh
+        long:   365 hari forecast penuh
 
     Operational shifting:
     - Saat ada data aktual baru (mis. Jan 2026), window horizon maju otomatis.
@@ -99,7 +99,7 @@ def forecast_horizon(df, horizon_name):
 
     # Untuk visualisasi: start window sesuai horizon (short=30, mid=180, long=365)
     display_start = forecast_start
-    
+
 
     return full_series.loc[full_series.index >= display_start]
 
@@ -117,7 +117,7 @@ def forecast_mid_term(df):
 
 
 def forecast_long_term(df):
-    """Forecast long term (365 days) using ARIMA"""
+    """Forecast long term (365 days) using PROPHET"""
     # Long-term = 12 bulan ke depan dari anchor
     return forecast_horizon(df, "long")
 

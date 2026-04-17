@@ -14,7 +14,7 @@ LONG_TERM_DAYS = 365
 # Model selection based on evaluation results
 # Short Term: PROPHET (RMSE: 61,874.25)
 # Mid Term: PROPHET (RMSE: 30,697.56)
-# Long Term: PROPHET (RMSE: 19,002.02) ← CHANGED from ARIMA!
+# Long Term: PROPHET (RMSE: 19,002.02)
 FORECAST_MODELS = {
     'short': {
         'days': SHORT_TERM_DAYS,

@@ -9,6 +9,7 @@
 6. [ ] **Complete task**: attempt_completion with final report
 
 ## Status
-- Diagnosis: Complete (only P1.6 needs fix)
-- Fixes: Minimal (chart consistency + debug logs)
-- Expected outcome: Charts show full 2019-2025 volatility, debug output in console
+- Diagnosis: Complete 
+- Fixes: Applied (PROPHET for long-term)
+- Code Review: In Progres
+- Expected outcome: Charts show proper variation, no flat lines

@@ -128,7 +128,7 @@ def dashboard():
             short_score = mid_score = long_score = 0
 
         # =====================================================================
-        # DATA UNTUK CHART (ACTUAL 2022–2025)
+        # DATA UNTUK CHART (ACTUAL 2019–2025)
         # =====================================================================
         df_chart_data = df.loc[
             (df.index >= pd.Timestamp("2019-01-01")) &
