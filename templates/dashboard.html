@@ -313,7 +313,7 @@
             tension: 0
         },
         {
-            label: 'Short-Term Forecast — Eval (PROPHET)',
+            label: 'Short-Term Forecast — Eval (ARIMA)',
             data: buildSeries(allDates, shortDates, shortValues),
             borderColor: 'green',
             borderWidth: 2,
@@ -331,7 +331,7 @@
             tension: 0.1
         },
         {
-            label: 'Long-Term Forecast — Eval (PROPHET)',
+            label: 'Long-Term Forecast — Eval (ARIMA)',
             data: buildSeries(allDates, longDates, longEvalValues),
             borderColor: 'red',
             borderWidth: 2,
@@ -340,7 +340,7 @@
             tension: 0.1
         },
         {
-            label: 'Long-Term Forecast — Prediksi (PROPHET)',
+            label: 'Long-Term Forecast — Prediksi (ARIMA)',
             data: buildSeries(allDates, longProdDates, longProdValues),
             borderColor: 'darkred',
             borderWidth: 2,

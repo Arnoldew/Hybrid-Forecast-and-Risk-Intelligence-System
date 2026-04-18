@@ -12,27 +12,31 @@ MID_TERM_DAYS = 180
 LONG_TERM_DAYS = 365
 
 # Model selection based on evaluation results
-# Short Term: PROPHET (RMSE: 61,874.25)
-# Mid Term: PROPHET (RMSE: 30,697.56)
-# Long Term: PROPHET (RMSE: 19,002.02)
+# ============================================================================
+# EVALUATION RESULTS (dari FORECAST_EVALUATION.py):
+# Short Term (30 days):   ARIMA MAPE=3.73%    vs PROPHET MAPE=19.37%   → ARIMA WINNER
+# Mid Term (180 days):    ARIMA MAPE=64.12%   vs PROPHET MAPE=56.10%   → PROPHET WINNER
+# Long Term (365 days):   ARIMA MAPE=41.66%   vs PROPHET MAPE=61.21%   → ARIMA WINNER
+# ============================================================================
+
 FORECAST_MODELS = {
     'short': {
         'days': SHORT_TERM_DAYS,
-        'model': 'prophet',
+        'model': 'arima',  # ✓ ARIMA WINNER (MAPE: 3.73%)
         'train_end': '2026-01-31',
         'test_start': '2026-02-01',
         'test_end': '2026-08-31'
     },
     'mid': {
         'days': MID_TERM_DAYS,
-        'model': 'prophet',
+        'model': 'prophet',  # ✓ PROPHET WINNER (MAPE: 56.10%)
         'train_end': '2025-07-31',
         'test_start': '2025-08-01',
         'test_end': '2026-01-31'
     },
     'long': {
         'days': LONG_TERM_DAYS,
-        'model': 'prophet',  # ← CHANGED from 'arima'
+        'model': 'arima',  # ✓ ARIMA WINNER (MAPE: 41.66%)
         'train_end': '2026-01-31',
         'test_start': '2026-02-01',
         'test_end': '2027-01-31'
@@ -50,21 +54,21 @@ EVAL_WINDOWS = {
         "train_end": "2025-11-30",
         "forecast_start": "2025-12-01",
         "forecast_end": "2025-12-31",
-        "model": "prophet"
+        "model": "arima"  # ✓ Updated sesuai evaluation
     },
 
     "mid": {
         "train_end": "2025-06-30",
         "forecast_start": "2025-07-01",
         "forecast_end": "2025-12-31",
-        "model": "prophet"
+        "model": "prophet"  # ✓ Updated sesuai evaluation
     },
 
     "long": {
         "train_end": "2024-12-31",
         "forecast_start": "2025-01-01",
         "forecast_end": "2025-12-31",
-        "model": "prophet"  # ← CHANGED from 'arima'
+        "model": "arima"  # ✓ Updated sesuai evaluation
     }
 
 }
