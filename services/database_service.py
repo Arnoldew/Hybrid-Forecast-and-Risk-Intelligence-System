@@ -66,11 +66,32 @@ def save_risk(date, horizon, score, level, direction, fdi_value, vol_ratio, tren
                 print(f"Warning: Could not parse date '{date}': {e}")
                 date = datetime.now().strftime("%Y-%m-%d")
         
-        # Validasi nilai numerik sebelum INSERT
-        fdi_value   = float(fdi_value)   if fdi_value   is not None else 0.0
-        vol_ratio   = float(vol_ratio)   if vol_ratio   is not None else 1.0
-        trend_slope = float(trend_slope) if trend_slope is not None else 0.0
-        score       = int(score)         if score       is not None else 0
+        # Validasi nilai numerik sebelum INSERT - GUARD NaN values
+        import math
+        
+        # Guard score: jika NaN atau None, default ke 0
+        if score is None or (isinstance(score, float) and math.isnan(score)):
+            score = 0
+        else:
+            score = int(score)
+        
+        # Guard fdi_value
+        if fdi_value is None or (isinstance(fdi_value, float) and math.isnan(fdi_value)):
+            fdi_value = 0.0
+        else:
+            fdi_value = float(fdi_value)
+        
+        # Guard vol_ratio
+        if vol_ratio is None or (isinstance(vol_ratio, float) and math.isnan(vol_ratio)):
+            vol_ratio = 1.0
+        else:
+            vol_ratio = float(vol_ratio)
+        
+        # Guard trend_slope
+        if trend_slope is None or (isinstance(trend_slope, float) and math.isnan(trend_slope)):
+            trend_slope = 0.0
+        else:
+            trend_slope = float(trend_slope)
 
         conn = sqlite3.connect(DATABASE_PATH)
         cursor = conn.cursor()
@@ -79,9 +100,9 @@ def save_risk(date, horizon, score, level, direction, fdi_value, vol_ratio, tren
         INSERT INTO risk_status 
             (date, horizon, risk_score, risk_level, direction, fdi_value, vol_ratio, trend_slope, risk_message)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """, (date, horizon, int(score), level, direction,
-              round(float(fdi_value), 4), round(float(vol_ratio), 4),
-              round(float(trend_slope), 4), message))
+        """, (date, horizon, score, level, direction,
+              round(fdi_value, 4), round(vol_ratio, 4),
+              round(trend_slope, 4), message))
 
         conn.commit()
         conn.close()

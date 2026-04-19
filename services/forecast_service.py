@@ -1,12 +1,12 @@
 """
-Forecast Service
-Menyediakan forecast untuk short, mid, dan long term dengan model optimal
+Forecast Service - Hybrid Ensemble Edition
+Menggabungkan ARIMA dan Prophet secara paralel dengan pembobotan dinamis
+untuk menghasilkan chart yang fluktuatif namun tetap akurat.
 """
 
 import pandas as pd
 import numpy as np
-from config import FORECAST_MODELS
-from config import EVAL_WINDOWS
+from config import FORECAST_MODELS, EVAL_WINDOWS, HYBRID_WEIGHTS
 from models.arima_model import train_arima, forecast_arima
 from models.prophet_model import train_prophet, forecast_prophet
 from services.model_cache_service import (
@@ -15,154 +15,103 @@ from services.model_cache_service import (
     save_model_to_cache
 )
 
-
 def prepare_dataframe(df):
-    """Prepare dataframe for forecasting"""
+    """Mempersiapkan dataframe untuk peramalan"""
     df = df.copy()
     df = df.sort_index()
     df = df.asfreq("D")
-    df["price"] = df["price"].interpolate(method="linear", limit=7)
+    # Interpolasi linear untuk menangani harga 0 atau missing values
+    df["price"] = df["price"].replace(0, np.nan)
+    df["price"] = df["price"].interpolate(method="linear", limit=30).ffill().bfill()
     return df
 
+def get_hybrid_forecast(train_df, steps, horizon_type, cache_prefix=""):
+    """
+    Logika Inti Hybrid: Menjalankan ARIMA & Prophet, lalu menggabungkannya.
+    """
+    # 1. Ambil Bobot dari Config
+    weights = HYBRID_WEIGHTS.get(horizon_type, {'arima': 0.5, 'prophet': 0.5})
+    
+    # 2. Proses ARIMA
+    cache_key_arima = f"{cache_prefix}arima_{horizon_type}"
+    model_arima = None
+    if is_cache_valid(cache_key_arima):
+        model_arima = load_cached_model(cache_key_arima)
+    
+    if model_arima is None:
+        model_arima = train_arima(train_df)
+        save_model_to_cache(cache_key_arima, model_arima)
+    
+    # Forecast ARIMA (hasilnya sudah dalam skala asli/inverse-log)
+    preds_arima = forecast_arima(model_arima, steps)
+
+    # 3. Proses Prophet
+    cache_key_prophet = f"{cache_prefix}prophet_{horizon_type}"
+    model_prophet = None
+    if is_cache_valid(cache_key_prophet):
+        model_prophet = load_cached_model(cache_key_prophet)
+    
+    if model_prophet is None:
+        # Input Prophet perlu format ds dan y
+        train_reset = train_df.reset_index()
+        train_reset.columns = ["ds", "y"]
+        # Kita gunakan use_log=False agar scaling konsisten saat penggabungan
+        model_prophet, _ = train_prophet(train_reset, use_log=False)
+        save_model_to_cache(cache_key_prophet, model_prophet)
+    
+    # Forecast Prophet
+    forecast_df_prophet = forecast_prophet(model_prophet, steps, use_log=False)
+    preds_prophet = forecast_df_prophet["yhat"].values
+
+    # 4. Penggabungan (Weighted Ensemble)
+    # Rumus: (Hasil ARIMA * Bobot A) + (Hasil Prophet * Bobot P)
+    hybrid_values = (preds_arima * weights['arima']) + (preds_prophet * weights['prophet'])
+    
+    return hybrid_values
 
 def forecast_horizon(df, horizon_name):
-    """
-    Generic function untuk forecast semua horizon dengan skema sesuai konteks:
-
-    - Garis hitam = data aktual (tahun target tetap actual, bukan hasil forecast)
-    - Garis forecast dimulai pada forecast_start dan menampilkan SELURUH horizon:
-        short:  30 hari forecast penuh
-        mid:    180 hari forecast penuh
-        long:   365 hari forecast penuh
-
-    Operational shifting:
-    - Saat ada data aktual baru (mis. Jan 2026), window horizon maju otomatis.
-      Forecast selalu untuk periode (anchor+1 ... anchor+days).
-      Data sebelum start forecast = data train.
-    """
-    if horizon_name not in FORECAST_MODELS:
-        raise ValueError(f"Unknown horizon: {horizon_name}")
-
+    """Fungsi generic untuk peramalan operasional di dashboard"""
     cfg = FORECAST_MODELS[horizon_name]
-    model_type = cfg["model"]
-    days = int(cfg["days"])
-
     df = prepare_dataframe(df)
-    if df.empty:
-        return pd.Series(dtype=float)
+    
+    # Tentukan anchor (titik akhir data latih)
+    train_df = df.loc[:cfg["train_end"]].copy()
+    steps = cfg["days"]
+    
+    # Jalankan Hybrid
+    forecast_values = get_hybrid_forecast(train_df, steps, horizon_name, cache_prefix="op_")
+    
+    # Buat Index Tanggal untuk Chart
+    forecast_start = pd.to_datetime(cfg["train_end"]) + pd.Timedelta(days=1)
+    forecast_index = pd.date_range(start=forecast_start, periods=steps, freq="D")
+    
+    return pd.Series(forecast_values, index=forecast_index)
 
-    anchor_date = df.index.max().normalize()
-    forecast_start = anchor_date + pd.Timedelta(days=1)
-    forecast_end = forecast_start + pd.Timedelta(days=days - 1)
-
-    # Train = semua data sebelum forecast_start
-    train = df.loc[df.index < forecast_start].copy()
-    if train.dropna().shape[0] < 10:
-        return pd.Series(dtype=float)
-
-    # Cache key harus mempertimbangkan anchor_date supaya "maju sebulan" tidak pakai model lama
-    cache_key = f"{horizon_name}_{anchor_date.strftime('%Y%m%d')}"
-
-    if is_cache_valid(cache_key):
-        model = load_cached_model(cache_key)
-        if model is not None:
-            if model_type == "arima":
-                forecast = forecast_arima(model, days)
-            else:
-                forecast_df = forecast_prophet(model, days)
-                forecast = forecast_df["yhat"].values
-
-            full_index = pd.date_range(start=forecast_start, periods=len(forecast), freq="D")
-            full_series = pd.Series(forecast, index=full_index).clip(lower=0)
-
-            # Untuk visualisasi: tampilkan hanya bagian yang sesuai start window horizon
-            display_start = forecast_start
-
-            return full_series.loc[full_series.index >= display_start]
-
-    print(f"Training {model_type.upper()} model for {horizon_name} term (anchor={anchor_date.date()})...")
-
-    if model_type == "arima":
-        model = train_arima(train)
-        forecast = forecast_arima(model, days)
-    else:
-        train_reset = train.reset_index()
-        train_reset.columns = ["ds", "y"]
-        model = train_prophet(train_reset)
-        forecast_df = forecast_prophet(model, days)
-        forecast = forecast_df["yhat"].values
-
-    save_model_to_cache(cache_key, model)
-
-    full_index = pd.date_range(start=forecast_start, periods=len(forecast), freq="D")
-    full_series = pd.Series(forecast, index=full_index).clip(lower=0)
-
-    # Untuk visualisasi: start window sesuai horizon (short=30, mid=180, long=365)
-    display_start = forecast_start
-
-
-    return full_series.loc[full_series.index >= display_start]
-
-
+# Wrapper functions untuk dipanggil oleh app.py
 def forecast_short_term(df):
-    """Forecast short term (30 days) using PROPHET)"""
-    # Sesuai konteks chart: short-term = forecast 1 bulan ke depan dari anchor (data terakhir)
     return forecast_horizon(df, "short")
 
-
 def forecast_mid_term(df):
-    """Forecast mid term (180 days) using PROPHET"""
-    # Mid-term = 6 bulan ke depan dari anchor
     return forecast_horizon(df, "mid")
 
-
 def forecast_long_term(df):
-    """Forecast long term (365 days) using PROPHET"""
-    # Long-term = 12 bulan ke depan dari anchor
     return forecast_horizon(df, "long")
 
 def generate_evaluation_forecasts(df):
+    """Fungsi khusus untuk halaman evaluasi (backtesting)"""
     df = prepare_dataframe(df)
     forecasts = {}
 
     for horizon, cfg in EVAL_WINDOWS.items():
-        model = None
-        cache_key = f"eval_{horizon}_{cfg['train_end'].replace('-','')}"
-
         train_df = df.loc[:cfg["train_end"]].copy()
         start = pd.to_datetime(cfg["forecast_start"])
         end = pd.to_datetime(cfg["forecast_end"])
         steps = (end - start).days + 1
-
-        if is_cache_valid(cache_key):
-            model = load_cached_model(cache_key)
-
-        if model is None:
-            if cfg["model"] == "arima":
-                model = train_arima(train_df)
-            else:
-                train_reset = train_df.reset_index()
-                train_reset.columns = ["ds", "y"]
-                model = train_prophet(train_reset)
-            save_model_to_cache(cache_key, model)
         
-        if cfg["model"] == "arima":
-            forecast_values = forecast_arima(model, steps)
-        else:
-            forecast_df = forecast_prophet(model, steps)
-            forecast_values = forecast_df["yhat"].values
-
-        forecast_index = pd.date_range(
-            start=start, 
-            periods=steps, 
-            freq="D"
-        )
-
-        forecast_series = pd.Series(
-            forecast_values, 
-            index=forecast_index
-        ).clip(lower=0)
-
-        forecasts[horizon] = forecast_series
+        # Jalankan Hybrid
+        forecast_values = get_hybrid_forecast(train_df, steps, horizon, cache_prefix="eval_")
+        
+        forecast_index = pd.date_range(start=start, periods=steps, freq="D")
+        forecasts[horizon] = pd.Series(forecast_values, index=forecast_index)
 
     return forecasts

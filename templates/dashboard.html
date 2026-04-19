@@ -182,7 +182,7 @@
     const volCtx = document.getElementById('volChart').getContext('2d');
 
     // Timeline lengkap
-    const allDates = {{ all_dates | tojson }};
+    const allDates = {{ all_dates | default([]) | tojson }};
 
     // Data aktual
     const chartDates  = {{ chart_dates | tojson }};

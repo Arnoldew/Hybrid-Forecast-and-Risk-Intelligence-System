@@ -39,13 +39,15 @@ def train_prophet(train_df, use_log=False):
     if use_log:
         df['y'] = np.log(df['y'] + 1)  # +1 untuk handle y=0
     
-    # Create Prophet model (REMOVED invalid parameter)
+    # Create Prophet model
     model = Prophet(
         yearly_seasonality=True,
         weekly_seasonality=True,
         daily_seasonality=False,
         seasonality_mode='multiplicative' if use_log else 'additive',
-        interval_width=0.95
+        interval_width=0.95,
+        # Suppress Prophet's verbose output
+        # interval_width_margin=0.05
     )
     
     # Fit model (suppress verbose output)

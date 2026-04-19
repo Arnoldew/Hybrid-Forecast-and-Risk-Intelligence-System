@@ -26,14 +26,14 @@ def calculate_risk(df, forecast_series, horizon):
         price = df["price"]
 
         # --- 1. FDI ---
-        moving_avg  = price.rolling(RISK_WINDOW_DAYS).mean().iloc[-1]
-        rolling_std = price.rolling(RISK_WINDOW_DAYS).std().iloc[-1]
+        moving_avg  = price.rolling(RISK_WINDOW_DAYS).mean().fillna(price.mean()).iloc[-1]
+        rolling_std = price.rolling(RISK_WINDOW_DAYS).std().fillna(0).iloc[-1]
         last_forecast = float(forecast_series.iloc[-1])
         fdi = forecast_deviation(last_forecast, moving_avg, rolling_std)
 
         # --- 2. Volatility ratio ---
-        recent_std = price.rolling(VOL_RECENT_DAYS).std().iloc[-1]
-        baseline_std = price.rolling(VOL_BASELINE_DAYS).std().iloc[-1]
+        recent_std = price.rolling(VOL_RECENT_DAYS).std().fillna(0).iloc[-1]
+        baseline_std = price.rolling(VOL_BASELINE_DAYS).std().fillna(0).iloc[-1]
         vol_ratio = calculate_volatility_ratio(
             price,
             recent_days   = VOL_RECENT_DAYS,
@@ -73,3 +73,4 @@ def calculate_risk(df, forecast_series, horizon):
         print(f"Error calculating risk [{horizon}]: {e}")
         return 0, "Normal", "stable", 0.0, 1.0, 0.0, "Data tidak cukup untuk kalkulasi risiko."
 
+    
