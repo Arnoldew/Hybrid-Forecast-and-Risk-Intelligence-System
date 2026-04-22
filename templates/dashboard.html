@@ -85,9 +85,6 @@
 <body>
     <h1>Hybrid Forecast & Risk Intelligence System</h1>
 
-    <p><i>Last Update : {{ last_update }}</i></p>
-
-
     <div class="risk-panel">
         <h3 style="margin:0 0 4px">Risk Intelligence System</h3>
         <p style="margin:0;color:#888;font-size:13px">
@@ -171,12 +168,18 @@
     <canvas id="volChart" width="1000" height="250"></canvas>
 
     <div style="margin-top: 20px; background: white; padding: 15px; border-radius: 8px;">
-        <b>Risk Classification Rule:</b><br>
-        Normal &rarr; Deviasi &lt; 1 standar deviasi dari rata-rata 30 hari<br>
-        Waspada &rarr; Deviasi signifikan atau volatilitas meningkat<br>
-        Bahaya &rarr; Deviasi &gt; 3 standar deviasi dari rata-rata 30 hari
+        <b>Risk Classification Rule (Composite Score 0–100):</b><br><br>
+        <b>Komponen Penilaian:</b><br>
+        &bull; <b>FDI / Deviasi Forecast (40 poin)</b> &rarr; Z-score forecast vs rata-rata historis. Makin jauh deviasi (naik/turun), makin tinggi skor. Cap di 5&sigma; = 40 poin.<br>
+        &bull; <b>Rasio Volatilitas (30 poin)</b> &rarr; Perbandingan volatilitas 90 hari terakhir vs baseline 365 hari. Ratio &ge; 3.0x = 30 poin (maks).<br>
+        &bull; <b>Arah Tren (20 poin)</b> &rarr; Deteksi tren via regresi linear adaptif. Naik atau turun = 20 poin; stabil = 0 poin. Dikurangi 50% jika arah tren berlawanan dengan FDI.<br>
+        &bull; <b>Deviasi Musiman (10 poin)</b> &rarr; Selisih forecast vs rata-rata harga bulan yang sama di tahun-tahun sebelumnya. Deviasi &ge; 30% = 10 poin (maks).<br><br>
+        <b>Klasifikasi Level:</b><br>
+        &bull; <span style="color:#2ecc71;font-weight:bold;">Normal</span> &rarr; Score 0–29 &nbsp;|&nbsp; Harga diprediksi stabil, tidak ada sinyal risiko signifikan.<br>
+        &bull; <span style="color:#f39c12;font-weight:bold;">Waspada</span> &rarr; Score 30–59 &nbsp;|&nbsp; Terdapat indikasi deviasi, volatilitas meningkat, atau tren searah yang perlu dipantau.<br>
+        &bull; <span style="color:#e74c3c;font-weight:bold;">Bahaya</span> &rarr; Score 60–100 &nbsp;|&nbsp; Kombinasi beberapa sinyal risiko tinggi secara bersamaan. Intervensi atau kewaspadaan penuh diperlukan.
     </div>
-
+    
     <script>
     const ctx    = document.getElementById('priceChart').getContext('2d');
     const volCtx = document.getElementById('volChart').getContext('2d');

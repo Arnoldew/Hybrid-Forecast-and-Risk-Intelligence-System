@@ -31,6 +31,12 @@ def get_hybrid_forecast(train_df, steps, horizon_type, cache_prefix=""):
     """
     # 1. Ambil Bobot dari Config
     weights = HYBRID_WEIGHTS.get(horizon_type, {'arima': 0.5, 'prophet': 0.5})
+
+     # FIX: Tambahkan anchor_date ke cache key
+    # Sehingga setelah upload data baru, key berubah dan model diretrain
+    anchor_date = train_df.index.max().strftime("%Y%m%d")
+    cache_key_arima   = f"{cache_prefix}arima_{horizon_type}_{anchor_date}"
+    cache_key_prophet = f"{cache_prefix}prophet_{horizon_type}_{anchor_date}"
     
     # 2. Proses ARIMA
     cache_key_arima = f"{cache_prefix}arima_{horizon_type}"
@@ -77,7 +83,19 @@ def forecast_horizon(df, horizon_name):
     # Tentukan anchor (titik akhir data latih)
     train_df = df.loc[:cfg["train_end"]].copy()
     steps = cfg["days"]
-    
+
+    # FIX: Trim flat tail agar ARIMA tidak menghasilkan forecast konstan
+    flat_days = 0
+    price_clean = train_df["price"].dropna()
+    for window in range(2, min(60, len(price_clean))):
+        if price_clean.tail(window).std() > 1.0:
+            flat_days = window - 1
+            break
+
+    if 0 < flat_days < len(train_df) * 0.10:
+        train_df = train_df.iloc[:-flat_days].copy()
+        print(f"[{horizon_name}] Trimmed {flat_days} flat tail rows for ARIMA training")
+
     # Jalankan Hybrid
     forecast_values = get_hybrid_forecast(train_df, steps, horizon_name, cache_prefix="op_")
     raw_values = np.asarray(forecast_values, dtype=float)
@@ -87,7 +105,6 @@ def forecast_horizon(df, horizon_name):
     forecast_index = pd.date_range(start=forecast_start, periods=steps, freq="D")
     
     # Gunakan array positional untuk menghindari index alignment
-    # saat forecast_values bertipe pd.Series dengan index asal model.
     wrapped_series = pd.Series(raw_values, index=forecast_index)
 
     return wrapped_series

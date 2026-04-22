@@ -1,5 +1,6 @@
 import sqlite3
 import pandas as pd
+import numpy as np
 from config import DATABASE_PATH, RISK_WINDOW_DAYS, TREND_WINDOW_DAYS, VOL_RECENT_DAYS, VOL_BASELINE_DAYS
 from models.risk_engine import (
     calculate_volatility_ratio,
@@ -27,7 +28,10 @@ def calculate_risk(df, forecast_series, horizon):
 
         # --- 1. FDI ---
         moving_avg  = price.rolling(RISK_WINDOW_DAYS).mean().fillna(price.mean()).iloc[-1]
-        rolling_std = price.rolling(RISK_WINDOW_DAYS).std().fillna(0).iloc[-1]
+        rolling_std_recent = price.rolling(RISK_WINDOW_DAYS).std().iloc[-1]
+        rolling_std = rolling_std_recent if (rolling_std_recent is not None and 
+                        not np.isnan(rolling_std_recent) and 
+                        rolling_std_recent > 1e-10) else float(price.std())
         last_forecast = float(forecast_series.iloc[-1])
         fdi = forecast_deviation(last_forecast, moving_avg, rolling_std)
 

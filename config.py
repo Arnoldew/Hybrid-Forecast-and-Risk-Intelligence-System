@@ -69,8 +69,8 @@ FORECAST_MODELS = {
 # ============================================================================
 RISK_WINDOW_DAYS = 30     # Jendela evaluasi risiko
 TREND_WINDOW_DAYS = 7     # Jendela tren kenaikan
-VOL_RECENT_DAYS = 30      # Volatilitas jangka pendek
-VOL_BASELINE_DAYS = 90    # Volatilitas jangka panjang
+VOL_RECENT_DAYS = 90      # Volatilitas jangka pendek
+VOL_BASELINE_DAYS = 365    # Volatilitas jangka panjang
 ROLLING_WINDOW_DAYS = 30  # Moving average window
 
 # ============================================================================

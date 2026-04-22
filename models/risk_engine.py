@@ -47,35 +47,47 @@ def calculate_trend_slope(price_series, window=7):
     Hitung slope tren harga menggunakan linear regression.
     Slope positif = tren naik, negatif = tren turun.
     
+    Menggunakan fallback window adaptif jika window awal mengandung
+    data flat (std < 1.0), sehingga tetap bisa mendeteksi tren
+    meskipun data terbaru konstan.
+    
     Returns:
         float: slope (Rp/hari), positif=naik, negatif=turun
         str: 'up' | 'down' | 'stable'
     """
-    recent = price_series.dropna().tail(window)
+    windows_to_try = [window, 14, 30, 60]
 
-    if len(recent) < 3:
-        return 0.0, 'stable'
+    for w in windows_to_try:
+        recent = price_series.dropna().tail(w)
 
-    x = np.arange(len(recent))
-    y = recent.values
-    slope, _, _, _, _ = stats.linregress(x, y)
+        if len(recent) < 3:
+            continue
 
-    mean_price = y.mean()
-    if mean_price == 0:
-        return 0.0, 'stable'
+        # Skip window ini jika data flat (tidak ada variasi)
+        if recent.std() < 1.0:
+            continue
 
-    # Normalisasi slope sebagai % perubahan per hari terhadap rata-rata harga
-    slope_pct = (slope / mean_price) * 100
+        x = np.arange(len(recent))
+        y = recent.values
+        slope, _, _, _, _ = stats.linregress(x, y)
 
-    if slope_pct > 0.5:
-        direction = 'up'
-    elif slope_pct < -0.5:
-        direction = 'down'
-    else:
-        direction = 'stable'
+        mean_price = y.mean()
+        if mean_price == 0:
+            return 0.0, 'stable'
 
-    return float(slope), direction
+        slope_pct = (slope / mean_price) * 100
 
+        if slope_pct > 0.5:
+            direction = 'up'
+        elif slope_pct < -0.5:
+            direction = 'down'
+        else:
+            direction = 'stable'
+
+        return float(slope), direction
+
+    # Semua window flat atau data tidak cukup
+    return 0.0, 'stable'
 
 def get_seasonal_baseline(price_series, month):
     """
