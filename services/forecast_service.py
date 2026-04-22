@@ -80,12 +80,17 @@ def forecast_horizon(df, horizon_name):
     
     # Jalankan Hybrid
     forecast_values = get_hybrid_forecast(train_df, steps, horizon_name, cache_prefix="op_")
+    raw_values = np.asarray(forecast_values, dtype=float)
     
     # Buat Index Tanggal untuk Chart
     forecast_start = pd.to_datetime(cfg["train_end"]) + pd.Timedelta(days=1)
     forecast_index = pd.date_range(start=forecast_start, periods=steps, freq="D")
     
-    return pd.Series(forecast_values, index=forecast_index)
+    # Gunakan array positional untuk menghindari index alignment
+    # saat forecast_values bertipe pd.Series dengan index asal model.
+    wrapped_series = pd.Series(raw_values, index=forecast_index)
+
+    return wrapped_series
 
 # Wrapper functions untuk dipanggil oleh app.py
 def forecast_short_term(df):

@@ -2,7 +2,6 @@ from flask import Flask, render_template
 from flask import request, redirect
 import os
 import pandas as pd
-import json
 import sqlite3
 import math
 from utils.metrics import calculate_mape
@@ -19,6 +18,7 @@ from services.forecast_service import (
 
 app = Flask(__name__)
 init_db()
+
 
 def load_data():
     """Load price data from database
