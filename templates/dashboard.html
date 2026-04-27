@@ -316,7 +316,7 @@
             tension: 0
         },
         {
-            label: 'Short-Term Forecast — Eval (ARIMA)',
+            label: 'Short-Term Forecast — Eval (Hybrid 80:20)',
             data: buildSeries(allDates, shortDates, shortValues),
             borderColor: 'green',
             borderWidth: 2,
@@ -325,7 +325,7 @@
             tension: 0.1
         },
         {
-            label: 'Mid-Term Forecast — Eval (PROPHET)',
+            label: 'Mid-Term Forecast — Eval (Hybrid 50:50)',
             data: buildSeries(allDates, midDates, midValues),
             borderColor: 'orange',
             borderWidth: 2,
@@ -334,7 +334,7 @@
             tension: 0.1
         },
         {
-            label: 'Long-Term Forecast — Eval (ARIMA)',
+            label: 'Long-Term Forecast — Eval (Hybrid 30:70)',
             data: buildSeries(allDates, longDates, longEvalValues),
             borderColor: 'red',
             borderWidth: 2,
@@ -343,7 +343,7 @@
             tension: 0.1
         },
         {
-            label: 'Long-Term Forecast — Prediksi (ARIMA)',
+            label: 'Long-Term Forecast — Prediksi (Hybrid 30:70)',
             data: buildSeries(allDates, longProdDates, longProdValues),
             borderColor: 'darkred',
             borderWidth: 2,

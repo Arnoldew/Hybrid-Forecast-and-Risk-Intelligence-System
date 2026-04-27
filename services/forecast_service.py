@@ -39,7 +39,6 @@ def get_hybrid_forecast(train_df, steps, horizon_type, cache_prefix=""):
     cache_key_prophet = f"{cache_prefix}prophet_{horizon_type}_{anchor_date}"
     
     # 2. Proses ARIMA
-    cache_key_arima = f"{cache_prefix}arima_{horizon_type}"
     model_arima = None
     if is_cache_valid(cache_key_arima):
         model_arima = load_cached_model(cache_key_arima)
@@ -52,7 +51,6 @@ def get_hybrid_forecast(train_df, steps, horizon_type, cache_prefix=""):
     preds_arima = forecast_arima(model_arima, steps)
 
     # 3. Proses Prophet
-    cache_key_prophet = f"{cache_prefix}prophet_{horizon_type}"
     model_prophet = None
     if is_cache_valid(cache_key_prophet):
         model_prophet = load_cached_model(cache_key_prophet)
